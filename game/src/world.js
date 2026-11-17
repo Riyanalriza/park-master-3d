@@ -144,35 +144,38 @@ export function createWorld(scene, level) {
   // chase cam. Pass #7: the old disc was one smooth radial gradient with
   // no edge, so it read as a pale blob against the bright sky. The core
   // is now a solid disc with a HARD edge (bright centre, warm rim) plus a
-  // separate soft glow around it — a sun, not a smudge.
+  // separate soft glow around it — a sun, not a smudge. Pass #8: the disc
+  // was still pale cream on pale blue, so the core is now a hot amber
+  // (white centre, strong amber edge) and a big warm glow washes the sky
+  // around it, so the disc stands out instead of blending in.
   const sunTex = canvasTexture(256, 256, (g, W, H) => {
     const glow = g.createRadialGradient(128, 128, 30, 128, 128, 126);
-    glow.addColorStop(0, 'rgba(255,196,96,0.5)');
-    glow.addColorStop(0.5, 'rgba(255,190,90,0.16)');
-    glow.addColorStop(1, 'rgba(255,190,90,0)');
+    glow.addColorStop(0, 'rgba(255,180,70,0.55)');
+    glow.addColorStop(0.5, 'rgba(255,170,60,0.2)');
+    glow.addColorStop(1, 'rgba(255,170,60,0)');
     g.fillStyle = glow;
     g.fillRect(0, 0, W, H);
     const core = g.createRadialGradient(128, 128, 0, 128, 128, 62);
-    core.addColorStop(0, '#ffffff');
-    core.addColorStop(0.7, '#fff6cf');
-    core.addColorStop(0.95, '#ffe9a0');
-    core.addColorStop(1, '#ffe9a0');
+    core.addColorStop(0, '#fffdf0');
+    core.addColorStop(0.55, '#ffe98a');
+    core.addColorStop(0.85, '#ffc93d');
+    core.addColorStop(1, '#ff9d2e');
     g.fillStyle = core;
     g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(255,214,140,0.9)';
-    g.lineWidth = 3;
+    g.strokeStyle = 'rgba(255,157,46,0.95)';
+    g.lineWidth = 4;
     g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.stroke();
   });
   const haloTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255,214,150,0.4)');
-    grad.addColorStop(0.4, 'rgba(255,200,120,0.16)');
-    grad.addColorStop(1, 'rgba(255,200,120,0)');
+    grad.addColorStop(0, 'rgba(255,205,120,0.5)');
+    grad.addColorStop(0.4, 'rgba(255,190,90,0.22)');
+    grad.addColorStop(1, 'rgba(255,190,90,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
   });
   const sunDisc = new THREE.Mesh(
-    new THREE.CircleGeometry(10, 32),
+    new THREE.CircleGeometry(13, 32),
     new THREE.MeshBasicMaterial({ map: sunTex, transparent: true, fog: false }),
   );
   sunDisc.position.set(-35, 62, -260);
@@ -180,18 +183,47 @@ export function createWorld(scene, level) {
   // The halo sits BEHIND the disc (1.005x the disc position, further from
   // the camera) so its bright centre cannot wash out the disc.
   const sunHalo = new THREE.Mesh(
-    new THREE.CircleGeometry(20, 32),
-    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.4, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
+    new THREE.CircleGeometry(26, 32),
+    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.55, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   sunHalo.position.copy(sunDisc.position).multiplyScalar(1.005);
   sunHalo.lookAt(0, 0, 0);
-  scene.add(sunDisc, sunHalo);
+  // A wide warm wash on the sky itself, further behind the halo, so the
+  // sky around the sun reads golden instead of pale blue — the disc then
+  // has something warm to sit on, not bare sky.
+  const skyGlowTex = canvasTexture(256, 256, (g, W, H) => {
+    const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    grad.addColorStop(0, 'rgba(255,170,90,0.34)');
+    grad.addColorStop(0.45, 'rgba(255,160,80,0.16)');
+    grad.addColorStop(1, 'rgba(255,160,80,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+  });
+  const skyGlow = new THREE.Mesh(
+    new THREE.CircleGeometry(80, 32),
+    new THREE.MeshBasicMaterial({ map: skyGlowTex, transparent: true, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
+  );
+  skyGlow.position.copy(sunDisc.position).multiplyScalar(1.02);
+  skyGlow.lookAt(0, 0, 0);
+  scene.add(sunDisc, sunHalo, skyGlow);
 
   // A wide light ground disc so the horizon has ground under it, then the
   // distant skyline silhouettes ringing the lot on it — not floating in sky.
+  // Pass #8: the old flat brown disc read as a solid brown wall at the
+  // horizon. Now a radial gradient — warm and light near the lot, fading
+  // into a hazy tone at the rim — so it reads as ground falling away.
+  const farGroundTex = canvasTexture(256, 256, (g, W, H) => {
+    const grad = g.createRadialGradient(128, 128, 10, 128, 128, 128);
+    grad.addColorStop(0, '#7d7466');
+    grad.addColorStop(0.45, '#6b6257');
+    grad.addColorStop(0.8, '#7a6f5e');
+    grad.addColorStop(1, '#8a7a66');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+  });
   const farGround = new THREE.Mesh(
     new THREE.CircleGeometry(320, 48),
-    new THREE.MeshStandardMaterial({ color: 0x6b6257, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ map: farGroundTex, roughness: 1 }),
   );
   farGround.rotation.x = -Math.PI / 2;
   farGround.position.y = -0.05;

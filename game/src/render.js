@@ -19,9 +19,14 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   // The light comes from the south-east, high: the chase camera looks
   // north, so the walls it sees are sunlit instead of in shade (the old
   // north-west light left every camera-facing wall near-black).
-  const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x8a7a5f, 1.1);
+  // Pass #8: the south building's shadow read as a hard-edged dark blue
+  // slab from the top camera — the shadowed ground only got the cool
+  // hemisphere sky light. The hemisphere is now stronger with a warmer,
+  // lighter ground bounce, and the sun slightly dimmer, so shadows read
+  // as soft warm shade instead of a blue panel.
+  const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x9c8a68, 1.45);
   scene.add(hemi);
-  const moon = new THREE.DirectionalLight(0xffd9a0, 2.2);
+  const moon = new THREE.DirectionalLight(0xffd9a0, 2.0);
   moon.position.set(30, 80, 80);
   moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048);
@@ -29,6 +34,12 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   moon.shadow.camera.top = 45; moon.shadow.camera.bottom = -45;
   moon.shadow.camera.far = 160;
   scene.add(moon);
+  // Warm fill from the north-west, opposite the sun, no shadows: it
+  // lifts every shadowed surface (including the south building's long
+  // shadow on the lot) so the shadow reads as shade, not a dark panel.
+  const fill = new THREE.DirectionalLight(0xffe0b8, 0.55);
+  fill.position.set(-40, 60, -60);
+  scene.add(fill);
 
   const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 700);
   camera.position.set(-48, 10, 18);
@@ -241,8 +252,9 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
     drawMinimap();
   }
   function setDark(dark) {
-    hemi.intensity = dark ? 0.7 : 1.1;
-    moon.intensity = dark ? 1.2 : 2.2;
+    hemi.intensity = dark ? 0.7 : 1.45;
+    moon.intensity = dark ? 1.2 : 2.0;
+    fill.intensity = dark ? 0.3 : 0.55;
     renderer.toneMappingExposure = dark ? 1.0 : 1.15;
   }
   // Wire the overlay buttons once.
