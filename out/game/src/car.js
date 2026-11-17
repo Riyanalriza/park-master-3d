@@ -3,13 +3,7 @@
 // handbrake, circle-vs-AABB/circle collision and impact damage.
 import * as THREE from 'three';
 import { CAR, DAMAGE, LOT } from './config.js';
-
-function box(w, h, d, color, x = 0, y = 0, z = 0) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0.35 }));
-  m.position.set(x, y, z);
-  m.castShadow = true;
-  return m;
-}
+import { carTemplate, findGroup } from './assets.js';
 
 /** Soft radial pool of headlight on the asphalt, drawn once. */
 const poolTex = (() => {
@@ -25,47 +19,38 @@ const poolTex = (() => {
   return new THREE.CanvasTexture(c);
 })();
 
-/** A simple car mesh facing +z (its nose is +z in local space). */
+/** A car mesh facing +z, cloned from the Blender-built car.glb.
+
+The GLB holds the shaped body (bevelled panels, glass, lights, mirrors,
+bumpers, spoiler, wheel-arch lips) and four wheel pivots named PivotFL /
+PivotFR / PivotRL / PivotRR, each holding its wheel mesh. The paint is
+recoloured per car so parked cars vary; the rest is shared. The headlight
+beams and the warm pool of light on the asphalt stay procedural.
+*/
 export function makeCarMesh(color, opts = {}) {
-  const g = new THREE.Group();
-  const body = box(CAR.width, 0.55, CAR.length, color, 0, 0.55, 0);
-  const cabin = box(CAR.width * 0.78, 0.5, CAR.length * 0.48, 0x1c2733, 0, 1.05, -0.25);
-  cabin.material = new THREE.MeshStandardMaterial({ color: 0x1c2733, roughness: 0.15, metalness: 0.7 });
-  // Body-colour roof so the car reads from above, not as one dark slab.
-  const roof = box(CAR.width * 0.72, 0.07, CAR.length * 0.4, color, 0, 1.33, -0.28);
-  const nose = box(CAR.width * 0.94, 0.28, 0.5, 0x222222, 0, 0.42, CAR.length / 2 - 0.1);
-  const spoiler = opts.spoiler ? box(CAR.width * 0.9, 0.08, 0.35, 0x222222, 0, 0.95, -CAR.length / 2 + 0.15) : null;
-  // Raked windshield and rear glass.
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x8fb8d8, roughness: 0.08, metalness: 0.85 });
-  const shield = new THREE.Mesh(new THREE.BoxGeometry(CAR.width * 0.7, 0.5, 0.05), glassMat);
-  shield.position.set(0, 1.05, 0.78);
-  shield.rotation.x = -0.38;
-  const rearGlass = new THREE.Mesh(new THREE.BoxGeometry(CAR.width * 0.7, 0.45, 0.05), glassMat);
-  rearGlass.position.set(0, 1.05, -1.28);
-  rearGlass.rotation.x = 0.38;
-  // Bumpers and side mirrors.
-  const bumperF = box(CAR.width * 0.96, 0.2, 0.18, 0x1a1a1a, 0, 0.32, CAR.length / 2 + 0.02);
-  const bumperR = box(CAR.width * 0.96, 0.2, 0.18, 0x1a1a1a, 0, 0.32, -CAR.length / 2 - 0.02);
-  const mirrorMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.5, metalness: 0.4 });
-  const mirrors = [];
-  for (const s of [-1, 1]) {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.22), mirrorMat);
-    m.position.set(s * (CAR.width / 2 + 0.1), 1.0, 0.55);
-    mirrors.push(m);
+  const g = findGroup(carTemplate(), 'Car').clone(true);
+  const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.32, metalness: 0.55 });
+  g.traverse((o) => {
+    if (o.isMesh) {
+      o.castShadow = true;
+      if (o.material && o.material.name === 'BodyPaint') o.material = paint;
+    }
+  });
+  const pivots = [], wheels = [];
+  for (const tag of ['FL', 'FR', 'RL', 'RR']) {
+    const pivot = findGroup(g, 'Pivot' + tag);
+    // The wheel is the pivot's only child: a Group when the GLB splits the
+    // wheel mesh by material, a Mesh otherwise. Spinning the group spins
+    // the whole wheel around the axle either way.
+    const wheel = pivot.children[0];
+    if (!wheel) throw new Error(`Pivot${tag} has no wheel`);
+    pivots.push(pivot);
+    wheels.push(wheel);
   }
-  g.add(body, cabin, roof, nose, shield, rearGlass, bumperF, bumperR, ...mirrors);
-  if (spoiler) g.add(spoiler);
-  // Headlights (emissive) and a full-width taillight bar.
-  const hl = new THREE.MeshStandardMaterial({ color: 0xfff2c0, emissive: 0xffdf8a, emissiveIntensity: 1.6 });
-  const tl = new THREE.MeshStandardMaterial({ color: 0x881111, emissive: 0xdd2222, emissiveIntensity: 1.2 });
-  for (const s of [-1, 1]) {
-    const h = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.16, 0.06), hl);
-    h.position.set(s * 0.62, 0.62, CAR.length / 2 + 0.01);
-    g.add(h);
+  if (!opts.spoiler) {
+    const spoiler = g.getObjectByName('Spoiler');
+    if (spoiler) spoiler.removeFromParent();
   }
-  const tailBar = new THREE.Mesh(new THREE.BoxGeometry(CAR.width * 0.9, 0.1, 0.05), tl);
-  tailBar.position.set(0, 0.62, -CAR.length / 2 - 0.04);
-  g.add(tailBar);
   // Headlight beams: narrow at the lamp, widening forward, plus a warm pool
   // of light on the asphalt — no more flat grey triangle from above.
   const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.06, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
@@ -82,26 +67,6 @@ export function makeCarMesh(color, opts = {}) {
   pool.rotation.x = -Math.PI / 2;
   pool.position.set(0, 0.04, CAR.length / 2 + 4.5);
   g.add(pool);
-  const wheels = [];
-  const pivots = [];
-  const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.28, 14);
-  wheelGeo.rotateZ(Math.PI / 2);
-  const wheelMat = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.9 });
-  const hubGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.34, 12);
-  hubGeo.rotateZ(Math.PI / 2);
-  const hubMat = new THREE.MeshStandardMaterial({ color: 0xb8bec8, roughness: 0.25, metalness: 0.9 });
-  for (let i = 0; i < 4; i += 1) {
-    const [wx, wz] = [[-0.85, 1.45], [0.85, 1.45], [-0.85, -1.45], [0.85, -1.45]][i];
-    const pivot = new THREE.Group();
-    pivot.position.set(wx, 0.36, wz);
-    const w = new THREE.Mesh(wheelGeo, wheelMat);
-    w.castShadow = true;
-    const hub = new THREE.Mesh(hubGeo, hubMat);
-    pivot.add(w, hub);
-    g.add(pivot);
-    wheels.push(w);
-    pivots.push(pivot);
-  }
   g.userData.wheels = wheels;
   g.userData.pivots = pivots;
   return g;

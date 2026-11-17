@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { BAY, LOT, PALETTE, ROWS, bayCenter } from './config.js';
 import { createRandom } from './random.js';
 import { makeCarMesh } from './car.js';
+import { findGroup, propTemplate, towerTemplate } from './assets.js';
 
 function canvasTexture(w, h, draw) {
   const c = document.createElement('canvas');
@@ -159,14 +160,19 @@ export function createWorld(scene, level) {
   farGround.position.y = -0.05;
   scene.add(farGround);
 
-  // Distant skyline silhouettes ringing the lot, breaking the flat horizon.
-  const skylineMat = new THREE.MeshBasicMaterial({ color: 0x12162a, fog: false });
+  // Distant skyline: Blender-built towers with lit windows and rooftop
+  // detail, ringing the lot — no more flat black boxes on the horizon.
+  const towerVariants = ['TowerA', 'TowerB', 'TowerC'];
+  const towerCanon = { TowerA: [16, 24, 12], TowerB: [22, 18, 14], TowerC: [14, 30, 12] };
   for (let i = 0; i < 14; i += 1) {
     const a = (i / 14) * Math.PI * 2 + rng() * 0.25;
     const r = 125 + rng() * 50;
     const w = 18 + rng() * 18, h = 10 + rng() * 16, d = 12 + rng() * 10;
-    const tower = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), skylineMat);
-    tower.position.set(Math.cos(a) * r, h / 2 - 1, Math.sin(a) * r);
+    const variant = towerVariants[Math.floor(rng() * 3)];
+    const canon = towerCanon[variant];
+    const tower = findGroup(towerTemplate(), variant).clone(true);
+    tower.scale.set(w / canon[0], h / canon[1], d / canon[2]);
+    tower.position.set(Math.cos(a) * r, -1, Math.sin(a) * r);
     tower.rotation.y = rng() * Math.PI;
     scene.add(tower);
   }
@@ -194,6 +200,23 @@ export function createWorld(scene, level) {
     b.castShadow = true;
     scene.add(b);
     colliders.aabbs.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 });
+    // A roof AC unit so the flat roofline has something on it from above.
+    const ac = findGroup(propTemplate(), 'ACUnit').clone(true);
+    ac.position.set(x + (rng() - 0.5) * w * 0.4, h, z + (rng() - 0.5) * d * 0.4);
+    ac.rotation.y = rng() * Math.PI;
+    scene.add(ac);
+  }
+
+  // Trees outside the lot, between the buildings — the lot is clamped, so
+  // they never need colliders.
+  const treeTemplate = findGroup(propTemplate(), 'Tree');
+  for (const [x, z, s] of [[30, -40, 1.1], [-30, -40, 0.9], [30, 40, 1.0], [-30, 40, 1.2], [-52, -8, 0.85], [-52, 8, 1.05], [52, -8, 0.95], [52, 8, 1.1]]) {
+    const tree = treeTemplate.clone(true);
+    tree.position.set(x, 0, z);
+    tree.scale.setScalar(s);
+    tree.rotation.y = rng() * Math.PI * 2;
+    tree.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    scene.add(tree);
   }
 
   // Curbs around the lot edge.
@@ -204,20 +227,16 @@ export function createWorld(scene, level) {
     scene.add(curb);
   }
 
-  // Lamps: pole + warm head; three real point lights, the rest emissive only.
+  // Lamps: Blender-built pole + arm + head; three real point lights, the
+  // rest emissive only.
   const lampPositions = [[-30, -13], [-10, -13], [10, -13], [30, -13], [-20, 13], [0, 13], [20, 13]];
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x30343e, roughness: 0.7, metalness: 0.5 });
-  const headMat = new THREE.MeshStandardMaterial({ color: 0x554411, emissive: PALETTE.lampGlow, emissiveIntensity: 2.2 });
+  const lampTemplate = findGroup(propTemplate(), 'Lamp');
   let lightCount = 0;
   for (const [x, z] of lampPositions) {
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 6, 8), poleMat);
-    pole.position.set(x, 3, z);
-    pole.castShadow = true;
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 0.1), poleMat);
-    arm.position.set(x + 0.7, 5.9, z);
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.16, 0.4), headMat);
-    head.position.set(x + 1.4, 5.85, z);
-    scene.add(pole, arm, head);
+    const lamp = lampTemplate.clone(true);
+    lamp.position.set(x, 0, z);
+    lamp.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+    scene.add(lamp);
     colliders.circles.push({ x, z, r: 0.25 });
     if (lightCount < 3) {
       const pl = new THREE.PointLight(0xffb340, 60, 30, 1.8);
