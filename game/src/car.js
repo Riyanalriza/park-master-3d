@@ -15,15 +15,15 @@ const poolTex = (() => {
   c.width = 128; c.height = 128;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,214,138,0.20)');
-  grad.addColorStop(0.3, 'rgba(255,214,138,0.12)');
-  grad.addColorStop(0.55, 'rgba(255,214,138,0.04)');
-  grad.addColorStop(0.8, 'rgba(255,214,138,0.01)');
+  grad.addColorStop(0, 'rgba(255,214,138,0.07)');
+  grad.addColorStop(0.3, 'rgba(255,214,138,0.04)');
+  grad.addColorStop(0.55, 'rgba(255,214,138,0.015)');
+  grad.addColorStop(0.8, 'rgba(255,214,138,0.005)');
   grad.addColorStop(1, 'rgba(255,214,138,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
   // Irregular edge: a few faint blobs around the rim break the ellipse.
-  for (const [x, y, r, a] of [[30, 46, 16, 0.05], [98, 40, 14, 0.04], [22, 84, 13, 0.04], [104, 88, 17, 0.05], [64, 108, 15, 0.04], [64, 22, 12, 0.04]]) {
+  for (const [x, y, r, a] of [[30, 46, 16, 0.02], [98, 40, 14, 0.015], [22, 84, 13, 0.015], [104, 88, 17, 0.02], [64, 108, 15, 0.015], [64, 22, 12, 0.015]]) {
     const b = g.createRadialGradient(x, y, 1, x, y, r);
     b.addColorStop(0, `rgba(255,214,138,${a})`);
     b.addColorStop(1, 'rgba(255,214,138,0)');
@@ -78,7 +78,7 @@ export function makeCarMesh(color, opts = {}) {
   // Headlight beams: barely-there cones, narrow at the lamp and widening
   // forward, plus one wide soft pool of light on the asphalt — no hard
   // cone edges visible from above, just light on the road.
-  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.012, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.005, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   for (const s of [-1, 1]) {
     const beam = new THREE.Mesh(new THREE.ConeGeometry(1.2, 5, 12, 1, true), beamMat);
     beam.rotation.x = -Math.PI / 2;
@@ -115,7 +115,7 @@ export function createCar() {
     // Front pivots steer (yaw), every wheel spins with travel.
     mesh.userData.pivots[0].rotation.y = state.steer;
     mesh.userData.pivots[1].rotation.y = state.steer;
-    for (const w of mesh.userData.wheels) w.rotation.x += (state.speed * dt) / 0.44;
+    for (const w of mesh.userData.wheels) w.rotation.x += (state.speed * dt) / 0.46;
   }
   /** Advance one fixed step. `drive` is {throttle -1..1, steer -1..1, handbrake}. */
   function step(dt, drive, colliders) {

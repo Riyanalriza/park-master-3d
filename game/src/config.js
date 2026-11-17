@@ -22,7 +22,7 @@ export function bayCenter(row, index) {
 }
 
 export const CAR = {
-  length: 4.4, width: 1.9, wheelBase: 2.7, radius: 1.15,
+  length: 5.0, width: 1.92, wheelBase: 3.0, radius: 1.15,
   accel: 9.5, brake: 16, reverseAccel: 6.5, drag: 0.55, rollDrag: 1.1,
   maxSpeed: 15, maxReverse: 6.5, steerMax: 0.55, steerSpeed: 3.2,
   grip: 8.5, driftGrip: 2.2, handbrakeTurn: 1.6,
@@ -39,7 +39,7 @@ export const LEVELS = [
   { name: 'Reverse In', start: { x: -38, z: -14, heading: Math.PI / 2 }, target: { row: 'north', index: 8, reverse: true }, cones: [], parked: [], time: 120, par: 55, hint: 'Back into the bay — your nose must point out.' },
   { name: 'Tight Spot', start: { x: -40, z: 0, heading: Math.PI / 2 }, target: { row: 'north', index: 6, reverse: false }, cones: [], parked: ['north:5', 'north:7'], time: 120, par: 60, hint: 'Thread between the two parked cars. Slow is smooth.' },
   { name: 'Slalom', start: { x: -40, z: 0, heading: Math.PI / 2 }, target: { row: 'south', index: 3, reverse: false }, cones: [{ x: -24, z: -4 }, { x: -16, z: 4 }, { x: -8, z: -4 }, { x: 0, z: 4 }], parked: [], time: 120, par: 65, hint: 'Weave the cones, then park. Cones cost damage.' },
-  { name: 'Night Shift', start: { x: 40, z: 0, heading: -Math.PI / 2 }, target: { row: 'north', index: 10, reverse: false }, cones: [], parked: ['north:9', 'north:11', 'south:10'], time: 120, par: 60, hint: 'Late night, tight row. Headlights on, eyes open.', dark: true },
+  { name: 'Golden Hour', start: { x: 40, z: 0, heading: -Math.PI / 2 }, target: { row: 'north', index: 10, reverse: false }, cones: [], parked: ['north:9', 'north:11', 'south:10'], time: 120, par: 60, hint: 'Golden hour, tight row. Mind the parked cars.' },
   { name: 'Angle Bay', start: { x: -30, z: 14, heading: -Math.PI / 2 }, target: { row: 'west', index: 1, reverse: false }, cones: [{ x: -34, z: 8 }], parked: ['west:0'], time: 120, par: 60, hint: 'A diagonal bay — match its angle, not the lot.' },
   { name: 'Double Turn', start: { x: -40, z: 0, heading: Math.PI / 2 }, target: { row: 'north', index: 12, reverse: false }, cones: [], parked: [], barriers: [{ x: 0, z: 0, w: 14, d: 4 }, { x: 20, z: -10, w: 4, d: 12 }], time: 150, par: 75, hint: 'Concrete blocks the lane — go around, then park.' },
   { name: 'Rush Hour', start: { x: -40, z: 0, heading: Math.PI / 2 }, target: { row: 'south', index: 5, reverse: false }, cones: [{ x: -14, z: 8 }, { x: -6, z: 8 }], parked: ['south:4', 'south:6', 'north:5', 'north:6', 'south:3'], time: 150, par: 80, hint: 'The lot is full. One bay is yours — take it gently.' },

@@ -21,7 +21,7 @@ function groundTexture(rng) {
     const px = (x) => ((x + 48) / 96) * W;
     const pz = (z) => ((z + 33) / 66) * H;
     const sx = W / 96, sz = H / 66;
-    g.fillStyle = '#23262e';
+    g.fillStyle = '#4b4e55';
     g.fillRect(0, 0, W, H);
     // Asphalt speckle and stains.
     for (let i = 0; i < 5200; i += 1) {
@@ -86,6 +86,11 @@ function groundTexture(rng) {
       g.fill();
       g.restore();
     }
+    // Zebra crossing across the west entrance lane (city feel).
+    g.fillStyle = 'rgba(232,232,232,0.8)';
+    for (let z = -8; z <= 8; z += 2) {
+      g.fillRect(px(-37), pz(z) - 0.55 * sz, 3 * sx, 1.1 * sz);
+    }
   });
 }
 
@@ -107,14 +112,16 @@ export function createWorld(scene, level) {
   const colliders = { aabbs: [], circles: [] };
   const disposables = [];
 
-  // Dusk sky dome: a deeper gradient, plus a moon, stars and a far skyline.
+  // Golden-hour sky dome: bright blue overhead warming to a low sun
+  // on the horizon, plus a sun and a far skyline. (CPM2 direction: the
+  // old dusk sky hid every detail; daylight makes the city readable.)
   const skyTex = canvasTexture(4, 256, (g, W, H) => {
     const grad = g.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#0a0f24');
-    grad.addColorStop(0.4, '#20204a');
-    grad.addColorStop(0.62, '#3d2a52');
-    grad.addColorStop(0.8, '#6e3850');
-    grad.addColorStop(1, '#a85a40');
+    grad.addColorStop(0, '#2560aa');
+    grad.addColorStop(0.45, '#6ea3d4');
+    grad.addColorStop(0.7, '#eeb87e');
+    grad.addColorStop(0.85, '#f6a55e');
+    grad.addColorStop(1, '#e88f4e');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
   });
@@ -124,80 +131,48 @@ export function createWorld(scene, level) {
   );
   scene.add(sky);
 
-  // Moon with crater shading and a soft halo, high over the north lot, in
-  // view of the chase cam. The disc is a canvas texture (maria blotches and
-  // small craters), not a flat white circle; the halo is a radial gradient
-  // that fades into the sky instead of a hard-edged disc.
-  const moonTex = canvasTexture(256, 256, (g, W, H) => {
-    const grad = g.createRadialGradient(112, 108, 16, 128, 128, 124);
-    grad.addColorStop(0, '#fdf8e7');
-    grad.addColorStop(0.7, '#efe2b8');
-    grad.addColorStop(0.9, '#d9c89e');
-    grad.addColorStop(1, 'rgba(217,200,158,0)');
+  // Low sun with a warm halo, high over the north lot, in view of the
+  // chase cam. A plain bright disc (no maria/craters — the moon is gone
+  // with the night); the halo is a radial gradient that fades into the
+  // sky instead of a hard-edged disc.
+  const sunTex = canvasTexture(256, 256, (g, W, H) => {
+    const grad = g.createRadialGradient(128, 128, 20, 128, 128, 124);
+    grad.addColorStop(0, '#fffbe8');
+    grad.addColorStop(0.55, '#ffedb0');
+    grad.addColorStop(0.8, '#ffd98a');
+    grad.addColorStop(1, 'rgba(255,217,138,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
-    // Maria: soft darker blotches, deeper than pass #3 so the texture
-    // survives at game distance instead of washing out to a plain disc.
-    // Pass #5 pushes them further (0.65 -> 0.75) with two more blotches.
-    g.fillStyle = 'rgba(148,138,112,0.75)';
-    for (const [x, y, rx, ry, a] of [[96, 96, 34, 26, 0.4], [156, 146, 28, 34, 0.5], [120, 172, 22, 16, 0.3], [166, 86, 16, 14, 0.6], [140, 120, 20, 18, 0.5], [100, 130, 18, 20, 0.4], [88, 60, 20, 18, 0.5], [130, 150, 16, 16, 0.45]]) {
-      g.beginPath(); g.ellipse(x, y, rx, ry, a, 0, Math.PI * 2); g.fill();
-    }
-    // Craters: dark pit with a light rim on the lit side.
-    for (const [x, y, r] of [[86, 140, 7], [150, 106, 5], [110, 70, 6], [176, 160, 4], [70, 100, 4], [130, 150, 6], [100, 120, 4]]) {
-      g.fillStyle = 'rgba(118,108,84,0.72)';
-      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-      g.fillStyle = 'rgba(255,250,230,0.6)';
-      g.beginPath(); g.arc(x - r * 0.25, y - r * 0.25, r * 0.5, 0, Math.PI * 2); g.fill();
-    }
   });
   const haloTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(210,222,255,0.35)');
-    grad.addColorStop(0.4, 'rgba(200,212,255,0.15)');
-    grad.addColorStop(1, 'rgba(200,212,255,0)');
+    grad.addColorStop(0, 'rgba(255,214,150,0.4)');
+    grad.addColorStop(0.4, 'rgba(255,200,120,0.16)');
+    grad.addColorStop(1, 'rgba(255,200,120,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
   });
-  const moonDisc = new THREE.Mesh(
+  const sunDisc = new THREE.Mesh(
     new THREE.CircleGeometry(10, 32),
-    new THREE.MeshBasicMaterial({ map: moonTex, transparent: true, fog: false }),
+    new THREE.MeshBasicMaterial({ map: sunTex, transparent: true, fog: false }),
   );
-  moonDisc.position.set(-45, 55, -260);
-  moonDisc.lookAt(0, 0, 0);
+  sunDisc.position.set(-35, 62, -260);
+  sunDisc.lookAt(0, 0, 0);
   // The halo sits BEHIND the disc (1.005x the disc position, further from
-  // the camera) so its bright centre cannot wash out the disc texture —
-  // pass #4 had it at 0.995x, in front of the disc, which flooded the
-  // craters/maria and left a plain white disc.
-  const moonHalo = new THREE.Mesh(
-    new THREE.CircleGeometry(26, 32),
-    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.55, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
+  // the camera) so its bright centre cannot wash out the disc.
+  const sunHalo = new THREE.Mesh(
+    new THREE.CircleGeometry(20, 32),
+    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.4, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
-  moonHalo.position.copy(moonDisc.position).multiplyScalar(1.005);
-  moonHalo.lookAt(0, 0, 0);
-  scene.add(moonDisc, moonHalo);
+  sunHalo.position.copy(sunDisc.position).multiplyScalar(1.005);
+  sunHalo.lookAt(0, 0, 0);
+  scene.add(sunDisc, sunHalo);
 
-  // Stars on the upper hemisphere.
-  const starCount = 320;
-  const starPos = new Float32Array(starCount * 3);
-  for (let i = 0; i < starCount; i += 1) {
-    const a = rng() * Math.PI * 2;
-    const y = 0.18 + rng() * 0.8;
-    const r = Math.sqrt(1 - y * y) * 300;
-    starPos[i * 3] = Math.cos(a) * r;
-    starPos[i * 3 + 1] = y * 300;
-    starPos[i * 3 + 2] = Math.sin(a) * r;
-  }
-  const starGeo = new THREE.BufferGeometry();
-  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
-  const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0.85, fog: false }));
-  scene.add(stars);
-
-  // A wide dark ground disc so the horizon has ground under it, then the
+  // A wide light ground disc so the horizon has ground under it, then the
   // distant skyline silhouettes ringing the lot on it — not floating in sky.
   const farGround = new THREE.Mesh(
     new THREE.CircleGeometry(320, 48),
-    new THREE.MeshStandardMaterial({ color: 0x171a22, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: 0x4a4640, roughness: 1 }),
   );
   farGround.rotation.x = -Math.PI / 2;
   farGround.position.y = -0.05;
@@ -207,10 +182,10 @@ export function createWorld(scene, level) {
   // detail, ringing the lot — no more flat black boxes on the horizon.
   const towerVariants = ['TowerA', 'TowerB', 'TowerC'];
   const towerCanon = { TowerA: [16, 24, 12], TowerB: [22, 18, 14], TowerC: [14, 30, 12] };
-  for (let i = 0; i < 14; i += 1) {
-    const a = (i / 14) * Math.PI * 2 + rng() * 0.25;
+  for (let i = 0; i < 18; i += 1) {
+    const a = (i / 18) * Math.PI * 2 + rng() * 0.25;
     const r = 125 + rng() * 50;
-    const w = 18 + rng() * 18, h = 10 + rng() * 16, d = 12 + rng() * 10;
+    const w = 18 + rng() * 18, h = 10 + rng() * 20, d = 12 + rng() * 10;
     const variant = towerVariants[Math.floor(rng() * 3)];
     const canon = towerCanon[variant];
     const tower = findGroup(towerTemplate(), variant).clone(true);
@@ -256,9 +231,10 @@ export function createWorld(scene, level) {
   }
 
   // Trees outside the lot, between the buildings — the lot is clamped, so
-  // they never need colliders.
+  // they never need colliders. Four more line the streets in front of the
+  // perimeter blocks, so the city reads as tree-lined, not bare.
   const treeTemplate = findGroup(propTemplate(), 'Tree');
-  for (const [x, z, s] of [[30, -40, 1.1], [-30, -40, 0.9], [30, 40, 1.0], [-30, 40, 1.2], [-52, -8, 0.85], [-52, 8, 1.05], [52, -8, 0.95], [52, 8, 1.1]]) {
+  for (const [x, z, s] of [[30, -40, 1.1], [-30, -40, 0.9], [30, 40, 1.0], [-30, 40, 1.2], [-52, -8, 0.85], [-52, 8, 1.05], [52, -8, 0.95], [52, 8, 1.1], [20, -40, 1.0], [-20, -40, 1.15], [20, 40, 0.9], [-20, 40, 1.05]]) {
     const tree = treeTemplate.clone(true);
     tree.position.set(x, 0, z);
     tree.scale.setScalar(s);
@@ -273,6 +249,17 @@ export function createWorld(scene, level) {
     const curb = new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, d), curbMat);
     curb.position.set(x, 0.25, z);
     scene.add(curb);
+  }
+
+  // Sidewalks: light concrete strips between the bays and the curbs, so
+  // the lot reads as a city street, not a bare asphalt slab. Only 0.06
+  // high: the strip is drivable, so a tall slab would swallow the tires.
+  const walkMat = new THREE.MeshStandardMaterial({ color: 0x8a8578, roughness: 0.95 });
+  for (const [x, z, w, d] of [[0, -29, 92, 3.4], [0, 29, 92, 3.4], [-44.4, 0, 3.4, 62], [44.4, 0, 3.4, 62]]) {
+    const walk = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, d), walkMat);
+    walk.position.set(x, 0.03, z);
+    walk.receiveShadow = true;
+    scene.add(walk);
   }
 
   // Lamps: Blender-built pole + arm + head; three real point lights, the

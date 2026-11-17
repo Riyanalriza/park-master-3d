@@ -13,10 +13,11 @@
   #topbar small { display: block; font-size: 13px; font-weight: 400; color: #ffd27d; }
   #timer { top: 12px; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 800; background: rgba(10,12,18,.55); border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 4px 16px; }
   #timer.low { color: #ff6b5e; border-color: #ff6b5e; }
-  #map { top: 12px; right: 14px; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: rgba(10,12,18,.6); }
-  #speed { bottom: 16px; left: 16px; font-size: 34px; font-weight: 800; }
+  #map { top: 12px; right: 14px; border: 1px solid rgba(60,50,35,.45); border-radius: 8px; background: rgba(216,210,196,.85); }
+  #speed { bottom: 16px; left: 16px; font-size: 46px; font-weight: 800; }
   #speed small { font-size: 14px; font-weight: 400; color: #ffd27d; }
-  #speed .gear { font-size: 16px; color: #8be9c9; margin-left: 8px; }
+  #speed .gears { display: block; font-size: 15px; font-weight: 700; letter-spacing: 6px; color: #8a93a5; margin-top: 2px; }
+  #speed .gears .on { color: #37e08a; }
   #damage { bottom: 16px; right: 16px; width: 170px; font-size: 12px; text-align: right; }
   #damage .bar { height: 10px; border: 1px solid rgba(255,255,255,.35); border-radius: 5px; overflow: hidden; margin-top: 4px; }
   #damage .fill { height: 100%; width: 0%; background: #ff6b5e; }
@@ -58,7 +59,7 @@
 <div class="overlay" id="menu">
   <div class="panel">
     <h1>PARK MASTER 3D</h1>
-    <p class="sub">Night lot parking — drive it in, line it up, park it clean.</p>
+    <p class="sub">City parking — drive it in, line it up, park it clean.</p>
     <p>Pick a level. Park inside the glowing bay, facing the right way, without smashing cones or other cars. Faster and cleaner earns more stars.</p>
     <div class="levels" id="levelGrid"></div>
     <button class="btn" id="freeRoamBtn">FREE ROAM</button>

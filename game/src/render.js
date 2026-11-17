@@ -1,5 +1,5 @@
-// Rendering: Three.js scene, chase/near/top cameras, dusk lighting, the 2D
-// minimap and every HUD element (timer, speed, damage, banners, overlays).
+// Rendering: Three.js scene, chase/near/top cameras, golden-hour lighting,
+// the 2D minimap and every HUD element (timer, speed, damage, banners, overlays).
 import * as THREE from 'three';
 import { BAY, LEVELS, LOT, PARK, ROWS, bayCenter } from './config.js';
 
@@ -11,14 +11,18 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.15;
 
-  scene.fog = new THREE.Fog(0x1a1e2a, 70, 260);
+  scene.fog = new THREE.Fog(0xd9c4a3, 90, 320);
 
-  const hemi = new THREE.HemisphereLight(0x8a7fd0, 0x2a2118, 0.55);
+  // Golden-hour sun: bright blue sky above, warm ground bounce below.
+  // The light comes from the south-east, high: the chase camera looks
+  // north, so the walls it sees are sunlit instead of in shade (the old
+  // north-west light left every camera-facing wall near-black).
+  const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x8a7a5f, 1.1);
   scene.add(hemi);
-  const moon = new THREE.DirectionalLight(0x9fb4ff, 0.7);
-  moon.position.set(30, 55, 25);
+  const moon = new THREE.DirectionalLight(0xffd9a0, 2.2);
+  moon.position.set(30, 80, 80);
   moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048);
   moon.shadow.camera.left = -60; moon.shadow.camera.right = 60;
@@ -112,8 +116,10 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
       lx = car.x + fx * 7; ly = 1; lz = car.z + fz * 7;
       camera.up.set(0, 1, 0);
     } else {
-      px = car.x - fx * 10; py = 4.6; pz = car.z - fz * 10;
-      lx = car.x + fx * 5; ly = 1.1; lz = car.z + fz * 5;
+      // Low rear chase view, CPM2-style: close behind the car, low enough
+      // that the sedan's roofline and the city fill the frame.
+      px = car.x - fx * 11; py = 3.6; pz = car.z - fz * 11;
+      lx = car.x + fx * 5; ly = 1.2; lz = car.z + fz * 5;
       camera.up.set(0, 1, 0);
     }
     const k = 1 - Math.exp(-6 * dt);
@@ -126,13 +132,14 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
     camera.position.copy(camPos);
     camera.lookAt(camLook);
   }
+  // Minimap: light day-map style so it matches the bright city.
   function drawMinimap() {
     const W = mapCanvas.width, H = mapCanvas.height;
     const sx = W / 96, sy = H / 66;
     const X = (x) => (x + 48) * sx, Z = (z) => (z + 33) * sy;
-    mapCtx.fillStyle = '#141821';
+    mapCtx.fillStyle = '#d8d2c4';
     mapCtx.fillRect(0, 0, W, H);
-    mapCtx.strokeStyle = '#4a5060';
+    mapCtx.strokeStyle = '#6a6558';
     mapCtx.lineWidth = 2.2;
     mapCtx.strokeRect(X(LOT.x0), Z(LOT.z0), (LOT.x1 - LOT.x0) * sx, (LOT.z1 - LOT.z0) * sy);
     // Bays: filled so they read as rectangles, not just outlines.
@@ -140,9 +147,9 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
       mapCtx.save();
       mapCtx.translate(X(x), Z(z));
       mapCtx.rotate(-heading + Math.PI);
-      mapCtx.fillStyle = 'rgba(232,232,232,0.22)';
+      mapCtx.fillStyle = 'rgba(90,90,90,0.18)';
       mapCtx.fillRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
-      mapCtx.strokeStyle = 'rgba(232,232,232,0.75)';
+      mapCtx.strokeStyle = 'rgba(90,90,90,0.7)';
       mapCtx.lineWidth = 1.7;
       mapCtx.strokeRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
       mapCtx.restore();
@@ -153,7 +160,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
     for (const z of ROWS.west.zs) bayRect(ROWS.west.x, z, ROWS.west.heading);
     // Parked cars and cones, big enough to read at a glance.
     const level = game.level;
-    mapCtx.fillStyle = '#9aa3b8';
+    mapCtx.fillStyle = '#7a7568';
     for (const key of level.parked || []) {
       const [row, idx] = key.split(':');
       const b = bayCenter(row, Number(idx));
@@ -191,7 +198,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
     mapCtx.moveTo(0, -11); mapCtx.lineTo(8, 9); mapCtx.lineTo(-8, 9); mapCtx.closePath();
     mapCtx.fillStyle = '#ffb340';
     mapCtx.fill();
-    mapCtx.strokeStyle = '#ffffff';
+    mapCtx.strokeStyle = '#3a3428';
     mapCtx.lineWidth = 1.7;
     mapCtx.stroke();
     mapCtx.restore();
@@ -205,7 +212,9 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
       els.timer.classList.toggle('low', !game.freeRoam && game.timeLeft < 15);
       const kmh = Math.round(Math.abs(car.speed) * 3.6);
       const gear = car.speed > 0.2 ? 'D' : car.speed < -0.2 ? 'R' : 'N';
-      els.speed.innerHTML = `${kmh}<small> km/h</small><span class="gear">${gear}</span>`;
+      // CPM2-style gear selector: P R N D with the active gear lit.
+      const gears = ['P', 'R', 'N', 'D'].map((g) => `<span class="${g === gear ? 'on' : ''}">${g}</span>`).join('');
+      els.speed.innerHTML = `${kmh}<small> km/h</small><span class="gears">${gears}</span>`;
       els.dmgFill.style.width = `${Math.round(car.damage)}%`;
       // Banner: parking progress and guidance.
       const check = game.freeRoam ? null : game.parkCheck();
@@ -232,9 +241,9 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
     drawMinimap();
   }
   function setDark(dark) {
-    hemi.intensity = dark ? 0.3 : 0.55;
-    moon.intensity = dark ? 0.4 : 0.7;
-    renderer.toneMappingExposure = dark ? 0.9 : 1.05;
+    hemi.intensity = dark ? 0.7 : 1.1;
+    moon.intensity = dark ? 1.2 : 2.2;
+    renderer.toneMappingExposure = dark ? 1.0 : 1.15;
   }
   // Wire the overlay buttons once.
   $('freeRoamBtn').addEventListener('click', () => ui.onFreeRoam());
