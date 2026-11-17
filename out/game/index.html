@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Park Master 3D</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0d1017; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #eef1f5; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .hud { position: fixed; z-index: 5; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+  #topbar { top: 12px; left: 14px; font-size: 20px; font-weight: 700; }
+  #topbar small { display: block; font-size: 13px; font-weight: 400; color: #ffd27d; }
+  #timer { top: 12px; left: 50%; transform: translateX(-50%); font-size: 26px; font-weight: 800; background: rgba(10,12,18,.55); border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 4px 16px; }
+  #timer.low { color: #ff6b5e; border-color: #ff6b5e; }
+  #map { top: 12px; right: 14px; border: 1px solid rgba(255,255,255,.25); border-radius: 8px; background: rgba(10,12,18,.6); }
+  #speed { bottom: 16px; left: 16px; font-size: 34px; font-weight: 800; }
+  #speed small { font-size: 14px; font-weight: 400; color: #ffd27d; }
+  #speed .gear { font-size: 16px; color: #8be9c9; margin-left: 8px; }
+  #damage { bottom: 16px; right: 16px; width: 170px; font-size: 12px; text-align: right; }
+  #damage .bar { height: 10px; border: 1px solid rgba(255,255,255,.35); border-radius: 5px; overflow: hidden; margin-top: 4px; }
+  #damage .fill { height: 100%; width: 0%; background: #ff6b5e; }
+  #banner { top: 22%; left: 50%; transform: translateX(-50%); font-size: 34px; font-weight: 800; text-align: center; display: none; }
+  #banner small { display: block; font-size: 16px; font-weight: 400; color: #ffd27d; }
+  #hint { bottom: 64px; left: 50%; transform: translateX(-50%); font-size: 14px; color: #cfd6e2; background: rgba(10,12,18,.5); padding: 5px 12px; border-radius: 8px; }
+  .overlay { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(6,8,13,.72); backdrop-filter: blur(2px); }
+  .panel { background: #171c27; border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 28px 34px; max-width: 620px; width: 92%; text-align: center; box-shadow: 0 18px 50px rgba(0,0,0,.6); }
+  .panel h1 { margin: 0 0 4px; font-size: 44px; letter-spacing: 2px; color: #ffb340; }
+  .panel h2 { margin: 0 0 8px; font-size: 30px; color: #ffb340; }
+  .panel p { margin: 6px 0; color: #cfd6e2; line-height: 1.5; }
+  .panel .sub { color: #ffd27d; font-weight: 600; }
+  .levels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0; }
+  .levels button, .btn { pointer-events: auto; cursor: pointer; font: inherit; font-weight: 700; color: #10131a; background: #ffb340; border: none; border-radius: 10px; padding: 12px 6px; }
+  .levels button:hover, .btn:hover { background: #ffc95e; }
+  .levels button.locked { background: #2a3040; color: #7c8496; cursor: default; }
+  .levels button .st { display: block; font-size: 13px; color: #7a4d00; }
+  .levels button.locked .st { color: #5a6274; }
+  .btn { padding: 12px 22px; margin: 6px 4px 0; font-size: 16px; }
+  .btn.ghost { background: #2a3040; color: #eef1f5; }
+  .stars { font-size: 40px; letter-spacing: 6px; color: #ffb340; margin: 4px 0; }
+  .stars .off { color: #3a4152; }
+  .keys { font-size: 13px; color: #9aa3b5; line-height: 1.7; }
+  .keys b { color: #eef1f5; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="Park Master 3D: drive the car and park it in the marked bay"></canvas>
+<p id="status" role="status" aria-live="polite"></p>
+<div class="hud" id="topbar"></div>
+<div class="hud" id="timer"></div>
+<canvas class="hud" id="map" width="220" height="152"></canvas>
+<div class="hud" id="speed"></div>
+<div class="hud" id="damage"><span id="dmgLabel">DAMAGE</span><div class="bar"><div class="fill" id="dmgFill"></div></div></div>
+<div class="hud" id="banner"></div>
+<div class="hud" id="hint"></div>
+
+<div class="overlay" id="menu">
+  <div class="panel">
+    <h1>PARK MASTER 3D</h1>
+    <p class="sub">Night lot parking — drive it in, line it up, park it clean.</p>
+    <p>Pick a level. Park inside the glowing bay, facing the right way, without smashing cones or other cars. Faster and cleaner earns more stars.</p>
+    <div class="levels" id="levelGrid"></div>
+    <button class="btn" id="freeRoamBtn">FREE ROAM</button>
+    <p class="keys"><b>W A S D / arrows</b> drive &amp; steer &nbsp;·&nbsp; <b>Space</b> handbrake &nbsp;·&nbsp; <b>C</b> camera &nbsp;·&nbsp; <b>R</b> reset car &nbsp;·&nbsp; <b>P</b> pause &nbsp;·&nbsp; <b>M</b> sound</p>
+  </div>
+</div>
+
+<div class="overlay hidden" id="complete">
+  <div class="panel">
+    <h2 id="completeTitle">LEVEL COMPLETE</h2>
+    <div class="stars" id="completeStars"></div>
+    <p id="completeStats"></p>
+    <button class="btn" id="nextBtn">NEXT LEVEL</button>
+    <button class="btn ghost" id="replayBtn">REPLAY</button>
+    <button class="btn ghost" id="completeMenuBtn">MENU</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="failed">
+  <div class="panel">
+    <h2 id="failTitle">LEVEL FAILED</h2>
+    <p id="failReason"></p>
+    <button class="btn" id="retryBtn">TRY AGAIN</button>
+    <button class="btn ghost" id="failMenuBtn">MENU</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="pause">
+  <div class="panel">
+    <h2>PAUSED</h2>
+    <p>Take a breath. The bay is not going anywhere.</p>
+    <button class="btn" id="resumeBtn">RESUME</button>
+    <button class="btn ghost" id="pauseMenuBtn">MENU</button>
+  </div>
+</div>
+
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

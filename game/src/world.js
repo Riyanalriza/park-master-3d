@@ -1,0 +1,264 @@
+// The parking lot: dusk sky, asphalt with painted bays, perimeter buildings,
+// lamps, cones, parked cars, barriers and the glowing target bay. Also builds
+// the collision lists the car physics reads.
+import * as THREE from 'three';
+import { BAY, LOT, PALETTE, ROWS, bayCenter } from './config.js';
+import { createRandom } from './random.js';
+import { makeCarMesh } from './car.js';
+
+function canvasTexture(w, h, draw) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.anisotropy = 4;
+  return t;
+}
+
+function groundTexture(rng) {
+  return canvasTexture(1024, 704, (g, W, H) => {
+    const px = (x) => ((x + 48) / 96) * W;
+    const pz = (z) => ((z + 33) / 66) * H;
+    const sx = W / 96, sz = H / 66;
+    g.fillStyle = '#23262e';
+    g.fillRect(0, 0, W, H);
+    // Asphalt speckle and stains.
+    for (let i = 0; i < 5200; i += 1) {
+      g.fillStyle = rng() > 0.5 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.10)';
+      g.fillRect(rng() * W, rng() * H, 2, 2);
+    }
+    for (let i = 0; i < 14; i += 1) {
+      g.fillStyle = 'rgba(0,0,0,0.16)';
+      g.beginPath();
+      g.ellipse(rng() * W, rng() * H, 18 + rng() * 30, 10 + rng() * 16, rng() * 3, 0, Math.PI * 2);
+      g.fill();
+    }
+    // Lane dashes down the middle and along the driving lanes.
+    g.strokeStyle = '#c8a23a';
+    g.lineWidth = 3;
+    g.setLineDash([18, 16]);
+    for (const z of [-12, 0, 12]) {
+      g.beginPath(); g.moveTo(px(LOT.x0), pz(z)); g.lineTo(px(LOT.x1), pz(z)); g.stroke();
+    }
+    g.setLineDash([]);
+    // Bay outlines: white lines, north and south rows axis-aligned, west diagonal.
+    g.strokeStyle = '#e8e8e8';
+    g.lineWidth = 3;
+    const bayRect = (x, z, heading) => {
+      g.save();
+      g.translate(px(x), pz(z));
+      g.rotate(-heading + Math.PI); // canvas y is down, world z is down: heading maps directly
+      g.strokeRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sz, BAY.width * sx, BAY.length * sz);
+      g.restore();
+    };
+    for (const row of ['north', 'south']) {
+      const r = ROWS[row];
+      for (const x of r.xs) bayRect(x, r.z, r.heading);
+    }
+    for (const z of ROWS.west.zs) bayRect(ROWS.west.x, z, ROWS.west.heading);
+    // Entrance arrows near the west gate.
+    g.fillStyle = 'rgba(232,232,232,0.75)';
+    for (const z of [-6, 6]) {
+      g.save();
+      g.translate(px(-42), pz(z));
+      g.beginPath();
+      g.moveTo(10, 0); g.lineTo(-8, -9); g.lineTo(-8, 9); g.closePath();
+      g.fill();
+      g.restore();
+    }
+  });
+}
+
+function windowTexture(rng) {
+  return canvasTexture(256, 256, (g, W, H) => {
+    g.fillStyle = '#2c3140';
+    g.fillRect(0, 0, W, H);
+    for (let y = 12; y < H - 12; y += 26) {
+      for (let x = 12; x < W - 12; x += 30) {
+        const lit = rng() > 0.55;
+        g.fillStyle = lit ? (rng() > 0.5 ? '#ffca7a' : '#9fd8ff') : '#141821';
+        g.fillRect(x, y, 18, 15);
+      }
+    }
+  });
+}
+
+function stripeTexture() {
+  return canvasTexture(128, 32, (g, W, H) => {
+    g.fillStyle = '#d8b13a';
+    g.fillRect(0, 0, W, H);
+    g.fillStyle = '#191919';
+    for (let x = -H; x < W; x += 32) {
+      g.beginPath();
+      g.moveTo(x, H); g.lineTo(x + 16, 0); g.lineTo(x + 32, 0); g.lineTo(x + 16, H);
+      g.closePath(); g.fill();
+    }
+  });
+}
+
+export function createWorld(scene, level) {
+  const rng = createRandom(1337);
+  const colliders = { aabbs: [], circles: [] };
+  const disposables = [];
+
+  // Dusk sky dome.
+  const skyTex = canvasTexture(4, 256, (g, W, H) => {
+    const grad = g.createLinearGradient(0, 0, 0, H);
+    grad.addColorStop(0, '#12172e');
+    grad.addColorStop(0.55, '#2a2a4e');
+    grad.addColorStop(0.8, '#6b3a52');
+    grad.addColorStop(1, '#a35a44');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+  });
+  const sky = new THREE.Mesh(
+    new THREE.SphereGeometry(320, 24, 16),
+    new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false }),
+  );
+  scene.add(sky);
+
+  // Ground.
+  const ground = new THREE.Mesh(
+    new THREE.PlaneGeometry(96, 66),
+    new THREE.MeshStandardMaterial({ map: groundTexture(rng), roughness: 0.95 }),
+  );
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  // Perimeter buildings with lit windows.
+  const winTex = windowTexture(rng);
+  const buildingMat = new THREE.MeshStandardMaterial({ map: winTex, roughness: 0.85 });
+  const buildings = [
+    [-58, -38, 22, 16, 12], [0, -40, 30, 20, 14], [58, -38, 22, 16, 11],
+    [-58, 38, 22, 16, 13], [0, 40, 30, 20, 15], [58, 38, 22, 16, 12],
+    [-56, 0, 16, 22, 10], [56, 0, 16, 22, 10],
+  ];
+  for (const [x, z, w, h, d] of buildings) {
+    const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), buildingMat);
+    b.position.set(x, h / 2, z);
+    b.castShadow = true;
+    scene.add(b);
+    colliders.aabbs.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 });
+  }
+
+  // Curbs around the lot edge.
+  const curbMat = new THREE.MeshStandardMaterial({ color: PALETTE.curb, roughness: 0.9 });
+  for (const [x, z, w, d] of [[0, -31.2, 92, 1.2], [0, 31.2, 92, 1.2], [-46.2, 0, 1.2, 62], [46.2, 0, 1.2, 62]]) {
+    const curb = new THREE.Mesh(new THREE.BoxGeometry(w, 0.5, d), curbMat);
+    curb.position.set(x, 0.25, z);
+    scene.add(curb);
+  }
+
+  // Lamps: pole + warm head; three real point lights, the rest emissive only.
+  const lampPositions = [[-30, -13], [-10, -13], [10, -13], [30, -13], [-20, 13], [0, 13], [20, 13]];
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x30343e, roughness: 0.7, metalness: 0.5 });
+  const headMat = new THREE.MeshStandardMaterial({ color: 0x554411, emissive: PALETTE.lampGlow, emissiveIntensity: 2.2 });
+  let lightCount = 0;
+  for (const [x, z] of lampPositions) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 6, 8), poleMat);
+    pole.position.set(x, 3, z);
+    pole.castShadow = true;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.1, 0.1), poleMat);
+    arm.position.set(x + 0.7, 5.9, z);
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.16, 0.4), headMat);
+    head.position.set(x + 1.4, 5.85, z);
+    scene.add(pole, arm, head);
+    colliders.circles.push({ x, z, r: 0.25 });
+    if (lightCount < 3) {
+      const pl = new THREE.PointLight(0xffb340, 60, 30, 1.8);
+      pl.position.set(x + 1.4, 5.6, z);
+      scene.add(pl);
+      lightCount += 1;
+    }
+  }
+
+  // Parked cars in the bays the level names.
+  const parkedMeshes = [];
+  for (const key of level.parked || []) {
+    const [row, idx] = key.split(':');
+    const bay = bayCenter(row, Number(idx));
+    const color = PALETTE.parkedColors[Math.floor(rng() * PALETTE.parkedColors.length)];
+    const mesh = makeCarMesh(color);
+    mesh.position.set(bay.x, 0, bay.z);
+    mesh.rotation.y = bay.heading;
+    scene.add(mesh);
+    parkedMeshes.push(mesh);
+    if (row === 'west') colliders.aabbs.push({ x0: bay.x - 1.6, x1: bay.x + 1.6, z0: bay.z - 1.6, z1: bay.z + 1.6 });
+    else colliders.aabbs.push({ x0: bay.x - 1.15, x1: bay.x + 1.15, z0: bay.z - 2.5, z1: bay.z + 2.5 });
+  }
+
+  // Concrete barriers.
+  const stripeTex = stripeTexture();
+  for (const b of level.barriers || []) {
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(b.w, 1.1, b.d),
+      new THREE.MeshStandardMaterial({ map: stripeTex, roughness: 0.8 }),
+    );
+    mesh.position.set(b.x, 0.55, b.z);
+    mesh.castShadow = true;
+    scene.add(mesh);
+    colliders.aabbs.push({ x0: b.x - b.w / 2, x1: b.x + b.w / 2, z0: b.z - b.d / 2, z1: b.z + b.d / 2 });
+  }
+
+  // Cones: orange cones with a white band; a hard hit tips one over.
+  const coneGroup = new THREE.Group();
+  const coneMat = new THREE.MeshStandardMaterial({ color: PALETTE.cone, roughness: 0.6 });
+  const bandMat = new THREE.MeshStandardMaterial({ color: PALETTE.coneStripe, roughness: 0.6 });
+  const coneMeshes = [];
+  for (const c of level.cones || []) {
+    const g = new THREE.Group();
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.28, 0.7, 12), coneMat);
+    cone.position.y = 0.45;
+    cone.castShadow = true;
+    const band = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.21, 0.16, 12), bandMat);
+    band.position.y = 0.45;
+    const base = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.5), coneMat);
+    base.position.y = 0.04;
+    g.add(cone, band, base);
+    g.position.set(c.x, 0, c.z);
+    coneGroup.add(g);
+    coneMeshes.push(g);
+    colliders.circles.push({
+      x: c.x, z: c.z, r: 0.3, dead: false,
+      onHit() { this.dead = true; g.rotation.z = Math.PI / 2 - 0.15; g.position.y = 0.12; },
+    });
+  }
+  scene.add(coneGroup);
+
+  // Target bay: glowing outline + translucent fill + bobbing arrow.
+  const targetBay = bayCenter(level.target.row, level.target.index);
+  const targetHeading = level.target.reverse ? targetBay.heading + Math.PI : targetBay.heading;
+  const target = { ...targetBay, heading: targetHeading };
+  const hw = BAY.width / 2, hl = BAY.length / 2;
+  const corners = [[-hw, -hl], [hw, -hl], [hw, hl], [-hw, hl]].map(([u, v]) => {
+    const s = Math.sin(targetBay.heading), c = Math.cos(targetBay.heading);
+    return new THREE.Vector3(targetBay.x + u * c + v * s, 0.06, targetBay.z - u * s + v * c);
+  });
+  const outline = new THREE.LineLoop(
+    new THREE.BufferGeometry().setFromPoints([...corners, corners[0]]),
+    new THREE.LineBasicMaterial({ color: PALETTE.targetGlow }),
+  );
+  const fill = new THREE.Mesh(
+    new THREE.PlaneGeometry(BAY.width, BAY.length),
+    new THREE.MeshBasicMaterial({ color: PALETTE.targetGlow, transparent: true, opacity: 0.22, side: THREE.DoubleSide }),
+  );
+  fill.rotation.x = -Math.PI / 2;
+  fill.rotation.z = -targetBay.heading;
+  fill.position.set(targetBay.x, 0.05, targetBay.z);
+  const arrow = new THREE.Mesh(
+    new THREE.ConeGeometry(0.55, 1.1, 4),
+    new THREE.MeshStandardMaterial({ color: PALETTE.targetGlow, emissive: PALETTE.targetGlow, emissiveIntensity: 1.4 }),
+  );
+  arrow.rotation.x = Math.PI;
+  arrow.position.set(targetBay.x, 3.4, targetBay.z);
+  scene.add(outline, fill, arrow);
+
+  function update(t) {
+    arrow.position.y = 3.4 + Math.sin(t * 2.2) * 0.35;
+    arrow.rotation.y = t * 0.8;
+    fill.material.opacity = 0.18 + 0.09 * Math.sin(t * 2.2);
+  }
+
+  return { colliders, target, update, disposables };
+}
