@@ -132,15 +132,18 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
     const X = (x) => (x + 48) * sx, Z = (z) => (z + 33) * sy;
     mapCtx.fillStyle = '#141821';
     mapCtx.fillRect(0, 0, W, H);
-    mapCtx.strokeStyle = '#3a3f4a';
+    mapCtx.strokeStyle = '#4a5060';
+    mapCtx.lineWidth = 2;
     mapCtx.strokeRect(X(LOT.x0), Z(LOT.z0), (LOT.x1 - LOT.x0) * sx, (LOT.z1 - LOT.z0) * sy);
-    // Bays.
-    mapCtx.strokeStyle = 'rgba(232,232,232,0.7)';
-    mapCtx.lineWidth = 1;
+    // Bays: filled so they read as rectangles, not just outlines.
     const bayRect = (x, z, heading) => {
       mapCtx.save();
       mapCtx.translate(X(x), Z(z));
       mapCtx.rotate(-heading + Math.PI);
+      mapCtx.fillStyle = 'rgba(232,232,232,0.22)';
+      mapCtx.fillRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
+      mapCtx.strokeStyle = 'rgba(232,232,232,0.75)';
+      mapCtx.lineWidth = 1.5;
       mapCtx.strokeRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
       mapCtx.restore();
     };
@@ -148,38 +151,49 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
       for (const x of ROWS[row].xs) bayRect(x, ROWS[row].z, ROWS[row].heading);
     }
     for (const z of ROWS.west.zs) bayRect(ROWS.west.x, z, ROWS.west.heading);
-    // Parked cars and cones.
+    // Parked cars and cones, big enough to read at a glance.
     const level = game.level;
-    mapCtx.fillStyle = '#7c8496';
+    mapCtx.fillStyle = '#9aa3b8';
     for (const key of level.parked || []) {
       const [row, idx] = key.split(':');
       const b = bayCenter(row, Number(idx));
-      mapCtx.fillRect(X(b.x) - 2, Z(b.z) - 4, 4, 8);
+      mapCtx.save();
+      mapCtx.translate(X(b.x), Z(b.z));
+      mapCtx.rotate(-b.heading + Math.PI);
+      mapCtx.fillRect(-3.5, -6, 7, 12);
+      mapCtx.restore();
     }
     mapCtx.fillStyle = '#ff6a1f';
     for (const c of level.cones || []) {
-      mapCtx.beginPath(); mapCtx.arc(X(c.x), Z(c.z), 2, 0, Math.PI * 2); mapCtx.fill();
+      mapCtx.beginPath(); mapCtx.arc(X(c.x), Z(c.z), 3.5, 0, Math.PI * 2); mapCtx.fill();
     }
-    // Target bay.
+    // Target bay: bright fill with a glowing border.
     if (game.world && !game.freeRoam) {
       const t = game.world.target;
-      mapCtx.fillStyle = 'rgba(55,224,138,0.85)';
       mapCtx.save();
       mapCtx.translate(X(t.x), Z(t.z));
       mapCtx.rotate(-t.heading + Math.PI);
+      mapCtx.fillStyle = 'rgba(55,224,138,0.85)';
       mapCtx.fillRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
+      mapCtx.strokeStyle = '#8affc1';
+      mapCtx.lineWidth = 2.5;
+      mapCtx.strokeRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
       mapCtx.restore();
     }
-    // Player car as a triangle. Canvas y is down (= world +z), so a triangle
-    // drawn pointing up (-y) needs rotate(PI - heading) to face the car.
+    // Player car as a big arrow with a white outline. Canvas y is down
+    // (= world +z), so a triangle drawn pointing up (-y) needs
+    // rotate(PI - heading) to face the car.
     const car = game.car.state;
     mapCtx.save();
     mapCtx.translate(X(car.x), Z(car.z));
     mapCtx.rotate(Math.PI - car.heading);
-    mapCtx.fillStyle = '#ffb340';
     mapCtx.beginPath();
-    mapCtx.moveTo(0, -6); mapCtx.lineTo(4, 5); mapCtx.lineTo(-4, 5); mapCtx.closePath();
+    mapCtx.moveTo(0, -10); mapCtx.lineTo(7, 8); mapCtx.lineTo(-7, 8); mapCtx.closePath();
+    mapCtx.fillStyle = '#ffb340';
     mapCtx.fill();
+    mapCtx.strokeStyle = '#ffffff';
+    mapCtx.lineWidth = 1.5;
+    mapCtx.stroke();
     mapCtx.restore();
   }
   function updateHUD() {

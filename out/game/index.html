@@ -23,7 +23,7 @@
   #banner { top: 22%; left: 50%; transform: translateX(-50%); font-size: 34px; font-weight: 800; text-align: center; display: none; }
   #banner small { display: block; font-size: 16px; font-weight: 400; color: #ffd27d; }
   #hint { bottom: 64px; left: 50%; transform: translateX(-50%); font-size: 14px; color: #cfd6e2; background: rgba(10,12,18,.5); padding: 5px 12px; border-radius: 8px; }
-  .overlay { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: rgba(6,8,13,.72); backdrop-filter: blur(2px); }
+  .overlay { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, rgba(6,8,13,.28) 0%, rgba(6,8,13,.62) 100%); backdrop-filter: blur(1px); }
   .panel { background: #171c27; border: 1px solid rgba(255,255,255,.14); border-radius: 16px; padding: 28px 34px; max-width: 620px; width: 92%; text-align: center; box-shadow: 0 18px 50px rgba(0,0,0,.6); }
   .panel h1 { margin: 0 0 4px; font-size: 44px; letter-spacing: 2px; color: #ffb340; }
   .panel h2 { margin: 0 0 8px; font-size: 30px; color: #ffb340; }
@@ -49,7 +49,7 @@
 <p id="status" role="status" aria-live="polite"></p>
 <div class="hud" id="topbar"></div>
 <div class="hud" id="timer"></div>
-<canvas class="hud" id="map" width="220" height="152"></canvas>
+<canvas class="hud" id="map" width="300" height="208"></canvas>
 <div class="hud" id="speed"></div>
 <div class="hud" id="damage"><span id="dmgLabel">DAMAGE</span><div class="bar"><div class="fill" id="dmgFill"></div></div></div>
 <div class="hud" id="banner"></div>

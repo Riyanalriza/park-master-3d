@@ -101,13 +101,14 @@ export function createWorld(scene, level) {
   const colliders = { aabbs: [], circles: [] };
   const disposables = [];
 
-  // Dusk sky dome.
+  // Dusk sky dome: a deeper gradient, plus a moon, stars and a far skyline.
   const skyTex = canvasTexture(4, 256, (g, W, H) => {
     const grad = g.createLinearGradient(0, 0, 0, H);
-    grad.addColorStop(0, '#12172e');
-    grad.addColorStop(0.55, '#2a2a4e');
-    grad.addColorStop(0.8, '#6b3a52');
-    grad.addColorStop(1, '#a35a44');
+    grad.addColorStop(0, '#0a0f24');
+    grad.addColorStop(0.4, '#20204a');
+    grad.addColorStop(0.62, '#3d2a52');
+    grad.addColorStop(0.8, '#6e3850');
+    grad.addColorStop(1, '#a85a40');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
   });
@@ -116,6 +117,59 @@ export function createWorld(scene, level) {
     new THREE.MeshBasicMaterial({ map: skyTex, side: THREE.BackSide, fog: false }),
   );
   scene.add(sky);
+
+  // Moon with a soft halo, high over the north lot, in view of the chase cam.
+  const moonDisc = new THREE.Mesh(
+    new THREE.CircleGeometry(14, 32),
+    new THREE.MeshBasicMaterial({ color: 0xf4ecd8, fog: false }),
+  );
+  moonDisc.position.set(-45, 55, -260);
+  moonDisc.lookAt(0, 0, 0);
+  const moonHalo = new THREE.Mesh(
+    new THREE.CircleGeometry(24, 32),
+    new THREE.MeshBasicMaterial({ color: 0xcfd8ff, transparent: true, opacity: 0.22, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
+  );
+  moonHalo.position.copy(moonDisc.position).multiplyScalar(0.995);
+  moonHalo.lookAt(0, 0, 0);
+  scene.add(moonDisc, moonHalo);
+
+  // Stars on the upper hemisphere.
+  const starCount = 320;
+  const starPos = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount; i += 1) {
+    const a = rng() * Math.PI * 2;
+    const y = 0.18 + rng() * 0.8;
+    const r = Math.sqrt(1 - y * y) * 300;
+    starPos[i * 3] = Math.cos(a) * r;
+    starPos[i * 3 + 1] = y * 300;
+    starPos[i * 3 + 2] = Math.sin(a) * r;
+  }
+  const starGeo = new THREE.BufferGeometry();
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 1.6, sizeAttenuation: false, transparent: true, opacity: 0.85, fog: false }));
+  scene.add(stars);
+
+  // A wide dark ground disc so the horizon has ground under it, then the
+  // distant skyline silhouettes ringing the lot on it — not floating in sky.
+  const farGround = new THREE.Mesh(
+    new THREE.CircleGeometry(320, 48),
+    new THREE.MeshStandardMaterial({ color: 0x171a22, roughness: 1 }),
+  );
+  farGround.rotation.x = -Math.PI / 2;
+  farGround.position.y = -0.05;
+  scene.add(farGround);
+
+  // Distant skyline silhouettes ringing the lot, breaking the flat horizon.
+  const skylineMat = new THREE.MeshBasicMaterial({ color: 0x12162a, fog: false });
+  for (let i = 0; i < 14; i += 1) {
+    const a = (i / 14) * Math.PI * 2 + rng() * 0.25;
+    const r = 125 + rng() * 50;
+    const w = 18 + rng() * 18, h = 10 + rng() * 16, d = 12 + rng() * 10;
+    const tower = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), skylineMat);
+    tower.position.set(Math.cos(a) * r, h / 2 - 1, Math.sin(a) * r);
+    tower.rotation.y = rng() * Math.PI;
+    scene.add(tower);
+  }
 
   // Ground.
   const ground = new THREE.Mesh(
