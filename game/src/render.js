@@ -133,7 +133,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
     mapCtx.fillStyle = '#141821';
     mapCtx.fillRect(0, 0, W, H);
     mapCtx.strokeStyle = '#4a5060';
-    mapCtx.lineWidth = 2;
+    mapCtx.lineWidth = 2.2;
     mapCtx.strokeRect(X(LOT.x0), Z(LOT.z0), (LOT.x1 - LOT.x0) * sx, (LOT.z1 - LOT.z0) * sy);
     // Bays: filled so they read as rectangles, not just outlines.
     const bayRect = (x, z, heading) => {
@@ -143,7 +143,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
       mapCtx.fillStyle = 'rgba(232,232,232,0.22)';
       mapCtx.fillRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
       mapCtx.strokeStyle = 'rgba(232,232,232,0.75)';
-      mapCtx.lineWidth = 1.5;
+      mapCtx.lineWidth = 1.7;
       mapCtx.strokeRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
       mapCtx.restore();
     };
@@ -160,12 +160,12 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
       mapCtx.save();
       mapCtx.translate(X(b.x), Z(b.z));
       mapCtx.rotate(-b.heading + Math.PI);
-      mapCtx.fillRect(-3.5, -6, 7, 12);
+      mapCtx.fillRect(-4, -7, 8, 14);
       mapCtx.restore();
     }
     mapCtx.fillStyle = '#ff6a1f';
     for (const c of level.cones || []) {
-      mapCtx.beginPath(); mapCtx.arc(X(c.x), Z(c.z), 3.5, 0, Math.PI * 2); mapCtx.fill();
+      mapCtx.beginPath(); mapCtx.arc(X(c.x), Z(c.z), 4, 0, Math.PI * 2); mapCtx.fill();
     }
     // Target bay: bright fill with a glowing border.
     if (game.world && !game.freeRoam) {
@@ -176,7 +176,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
       mapCtx.fillStyle = 'rgba(55,224,138,0.85)';
       mapCtx.fillRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
       mapCtx.strokeStyle = '#8affc1';
-      mapCtx.lineWidth = 2.5;
+      mapCtx.lineWidth = 2.8;
       mapCtx.strokeRect((-BAY.width / 2) * sx, (-BAY.length / 2) * sy, BAY.width * sx, BAY.length * sy);
       mapCtx.restore();
     }
@@ -188,11 +188,11 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
     mapCtx.translate(X(car.x), Z(car.z));
     mapCtx.rotate(Math.PI - car.heading);
     mapCtx.beginPath();
-    mapCtx.moveTo(0, -10); mapCtx.lineTo(7, 8); mapCtx.lineTo(-7, 8); mapCtx.closePath();
+    mapCtx.moveTo(0, -11); mapCtx.lineTo(8, 9); mapCtx.lineTo(-8, 9); mapCtx.closePath();
     mapCtx.fillStyle = '#ffb340';
     mapCtx.fill();
     mapCtx.strokeStyle = '#ffffff';
-    mapCtx.lineWidth = 1.5;
+    mapCtx.lineWidth = 1.7;
     mapCtx.stroke();
     mapCtx.restore();
   }

@@ -11,8 +11,9 @@ const poolTex = (() => {
   c.width = 128; c.height = 128;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,214,138,0.55)');
-  grad.addColorStop(0.5, 'rgba(255,214,138,0.18)');
+  grad.addColorStop(0, 'rgba(255,214,138,0.42)');
+  grad.addColorStop(0.35, 'rgba(255,214,138,0.24)');
+  grad.addColorStop(0.7, 'rgba(255,214,138,0.07)');
   grad.addColorStop(1, 'rgba(255,214,138,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
@@ -51,21 +52,22 @@ export function makeCarMesh(color, opts = {}) {
     const spoiler = g.getObjectByName('Spoiler');
     if (spoiler) spoiler.removeFromParent();
   }
-  // Headlight beams: narrow at the lamp, widening forward, plus a warm pool
-  // of light on the asphalt — no more flat grey triangle from above.
-  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.06, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  // Headlight beams: barely-there cones, narrow at the lamp and widening
+  // forward, plus one wide soft pool of light on the asphalt — no hard
+  // cone edges visible from above, just light on the road.
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.02, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   for (const s of [-1, 1]) {
-    const beam = new THREE.Mesh(new THREE.ConeGeometry(1.0, 6, 12, 1, true), beamMat);
+    const beam = new THREE.Mesh(new THREE.ConeGeometry(1.2, 5, 12, 1, true), beamMat);
     beam.rotation.x = -Math.PI / 2;
-    beam.position.set(s * 0.62, 0.5, CAR.length / 2 + 3);
+    beam.position.set(s * 0.62, 0.5, CAR.length / 2 + 2.5);
     g.add(beam);
   }
   const pool = new THREE.Mesh(
-    new THREE.PlaneGeometry(5.5, 8),
+    new THREE.PlaneGeometry(7, 10),
     new THREE.MeshBasicMaterial({ map: poolTex, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   pool.rotation.x = -Math.PI / 2;
-  pool.position.set(0, 0.04, CAR.length / 2 + 4.5);
+  pool.position.set(0, 0.04, CAR.length / 2 + 5);
   g.add(pool);
   g.userData.wheels = wheels;
   g.userData.pivots = pivots;
@@ -90,7 +92,7 @@ export function createCar() {
     // Front pivots steer (yaw), every wheel spins with travel.
     mesh.userData.pivots[0].rotation.y = state.steer;
     mesh.userData.pivots[1].rotation.y = state.steer;
-    for (const w of mesh.userData.wheels) w.rotation.x += (state.speed * dt) / 0.36;
+    for (const w of mesh.userData.wheels) w.rotation.x += (state.speed * dt) / 0.44;
   }
   /** Advance one fixed step. `drive` is {throttle -1..1, steer -1..1, handbrake}. */
   function step(dt, drive, colliders) {

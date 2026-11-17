@@ -1,5 +1,5 @@
-// Blender-built assets (car.glb, towers.glb, props.glb) loaded once at
-// boot. The GLBs are original models built for this game in Blender;
+// Blender-built assets (car.glb, towers.glb, facades.glb, props.glb) loaded
+// once at boot. The GLBs are original models built for this game in Blender;
 // nothing in them is copied from any other game.
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
@@ -8,12 +8,13 @@ let cache = null;
 
 export async function loadAssets() {
   if (cache) return cache;
-  const [car, towers, props] = await Promise.all([
+  const [car, towers, facades, props] = await Promise.all([
     loader.loadAsync('./assets/car.glb'),
     loader.loadAsync('./assets/towers.glb'),
+    loader.loadAsync('./assets/facades.glb'),
     loader.loadAsync('./assets/props.glb'),
   ]);
-  cache = { car: car.scene, towers: towers.scene, props: props.scene };
+  cache = { car: car.scene, towers: towers.scene, facades: facades.scene, props: props.scene };
   return cache;
 }
 
@@ -32,4 +33,5 @@ function need() {
 
 export function carTemplate() { return need().car; }
 export function towerTemplate() { return need().towers; }
+export function facadeTemplate() { return need().facades; }
 export function propTemplate() { return need().props; }

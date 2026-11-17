@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { BAY, LOT, PALETTE, ROWS, bayCenter } from './config.js';
 import { createRandom } from './random.js';
 import { makeCarMesh } from './car.js';
-import { findGroup, propTemplate, towerTemplate } from './assets.js';
+import { findGroup, propTemplate, towerTemplate, facadeTemplate } from './assets.js';
 
 function canvasTexture(w, h, draw) {
   const c = document.createElement('canvas');
@@ -66,20 +66,6 @@ function groundTexture(rng) {
       g.moveTo(10, 0); g.lineTo(-8, -9); g.lineTo(-8, 9); g.closePath();
       g.fill();
       g.restore();
-    }
-  });
-}
-
-function windowTexture(rng) {
-  return canvasTexture(256, 256, (g, W, H) => {
-    g.fillStyle = '#2c3140';
-    g.fillRect(0, 0, W, H);
-    for (let y = 12; y < H - 12; y += 26) {
-      for (let x = 12; x < W - 12; x += 30) {
-        const lit = rng() > 0.55;
-        g.fillStyle = lit ? (rng() > 0.5 ? '#ffca7a' : '#9fd8ff') : '#141821';
-        g.fillRect(x, y, 18, 15);
-      }
     }
   });
 }
@@ -186,18 +172,21 @@ export function createWorld(scene, level) {
   ground.receiveShadow = true;
   scene.add(ground);
 
-  // Perimeter buildings with lit windows.
-  const winTex = windowTexture(rng);
-  const buildingMat = new THREE.MeshStandardMaterial({ map: winTex, roughness: 0.85 });
+  // Perimeter buildings: Blender-built facades with real lit windows,
+  // parapets and roof plant — no more flat textured boxes.
+  const facadeCanon = { Facade: [24, 16, 12], FacadeTall: [16, 22, 10] };
   const buildings = [
     [-58, -38, 22, 16, 12], [0, -40, 30, 20, 14], [58, -38, 22, 16, 11],
     [-58, 38, 22, 16, 13], [0, 40, 30, 20, 15], [58, 38, 22, 16, 12],
     [-56, 0, 16, 22, 10], [56, 0, 16, 22, 10],
   ];
   for (const [x, z, w, h, d] of buildings) {
-    const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), buildingMat);
-    b.position.set(x, h / 2, z);
-    b.castShadow = true;
+    const variant = h > 18 ? 'FacadeTall' : 'Facade';
+    const canon = facadeCanon[variant];
+    const b = findGroup(facadeTemplate(), variant).clone(true);
+    b.scale.set(w / canon[0], h / canon[1], d / canon[2]);
+    b.position.set(x, 0, z);
+    b.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(b);
     colliders.aabbs.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 });
     // A roof AC unit so the flat roofline has something on it from above.

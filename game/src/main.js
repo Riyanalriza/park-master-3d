@@ -10,7 +10,7 @@ import { stageShot } from './shots.js';
 import { loadAssets } from './assets.js';
 
 async function boot() {
-  // Blender-built assets (car, towers, props) must load before the game is
+  // Blender-built assets (car, towers, facades, props) must load before the game is
   // built: car.js and world.js clone them synchronously.
   try {
     await loadAssets();
