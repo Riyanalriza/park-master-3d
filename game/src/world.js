@@ -34,6 +34,25 @@ function groundTexture(rng) {
       g.ellipse(rng() * W, rng() * H, 18 + rng() * 30, 10 + rng() * 16, rng() * 3, 0, Math.PI * 2);
       g.fill();
     }
+    // Large-scale tone variation (pass #5): warm and cool mottling so
+    // the asphalt is not one flat grey, plus darker worn bands along
+    // the driving lanes and a few lighter repair patches.
+    for (let i = 0; i < 26; i += 1) {
+      const warm = rng() > 0.5;
+      g.fillStyle = warm ? 'rgba(190,150,110,0.045)' : 'rgba(120,140,190,0.04)';
+      g.beginPath(); g.ellipse(rng() * W, rng() * H, 60 + rng() * 120, 40 + rng() * 70, rng() * 3, 0, Math.PI * 2);
+      g.fill();
+    }
+    for (const z of [-12, 0, 12]) {
+      g.fillStyle = 'rgba(0,0,0,0.07)';
+      g.fillRect(0, pz(z) - 3.2 * sz, W, 6.4 * sz);
+      g.fillStyle = 'rgba(0,0,0,0.05)';
+      g.fillRect(0, pz(z) - 1.2 * sz, W, 2.4 * sz);
+    }
+    for (let i = 0; i < 7; i += 1) {
+      g.fillStyle = rng() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.12)';
+      g.fillRect(rng() * W, rng() * H, 40 + rng() * 90, 24 + rng() * 50);
+    }
     // Lane dashes down the middle and along the driving lanes.
     g.strokeStyle = '#c8a23a';
     g.lineWidth = 3;
@@ -119,15 +138,16 @@ export function createWorld(scene, level) {
     g.fillRect(0, 0, W, H);
     // Maria: soft darker blotches, deeper than pass #3 so the texture
     // survives at game distance instead of washing out to a plain disc.
-    g.fillStyle = 'rgba(148,138,112,0.65)';
-    for (const [x, y, rx, ry, a] of [[96, 96, 34, 26, 0.4], [156, 146, 28, 34, 0.5], [120, 172, 22, 16, 0.3], [166, 86, 16, 14, 0.6], [140, 120, 20, 18, 0.5], [100, 130, 18, 20, 0.4]]) {
+    // Pass #5 pushes them further (0.65 -> 0.75) with two more blotches.
+    g.fillStyle = 'rgba(148,138,112,0.75)';
+    for (const [x, y, rx, ry, a] of [[96, 96, 34, 26, 0.4], [156, 146, 28, 34, 0.5], [120, 172, 22, 16, 0.3], [166, 86, 16, 14, 0.6], [140, 120, 20, 18, 0.5], [100, 130, 18, 20, 0.4], [88, 60, 20, 18, 0.5], [130, 150, 16, 16, 0.45]]) {
       g.beginPath(); g.ellipse(x, y, rx, ry, a, 0, Math.PI * 2); g.fill();
     }
     // Craters: dark pit with a light rim on the lit side.
-    for (const [x, y, r] of [[86, 140, 7], [150, 106, 5], [110, 70, 6], [176, 160, 4], [70, 100, 4]]) {
-      g.fillStyle = 'rgba(118,108,84,0.62)';
+    for (const [x, y, r] of [[86, 140, 7], [150, 106, 5], [110, 70, 6], [176, 160, 4], [70, 100, 4], [130, 150, 6], [100, 120, 4]]) {
+      g.fillStyle = 'rgba(118,108,84,0.72)';
       g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-      g.fillStyle = 'rgba(255,250,230,0.55)';
+      g.fillStyle = 'rgba(255,250,230,0.6)';
       g.beginPath(); g.arc(x - r * 0.25, y - r * 0.25, r * 0.5, 0, Math.PI * 2); g.fill();
     }
   });

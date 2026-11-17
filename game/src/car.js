@@ -43,11 +43,21 @@ beams and the warm pool of light on the asphalt stay procedural.
 */
 export function makeCarMesh(color, opts = {}) {
   const g = findGroup(carTemplate(), 'Car').clone(true);
-  const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.32, metalness: 0.55 });
+  // The Blender paint carries a gradient texture + clearcoat; keep it and
+  // only retint it (pass #5), so parked cars vary without losing the
+  // paintwork. The texture multiplies the colour, so the gradient (bright
+  // top, deep bottom) survives under every paint colour.
+  let paint = null;
   g.traverse((o) => {
     if (o.isMesh) {
       o.castShadow = true;
-      if (o.material && o.material.name === 'BodyPaint') o.material = paint;
+      if (o.material && o.material.name === 'BodyPaint') {
+        if (!paint) {
+          paint = o.material.clone();
+          paint.color.set(color);
+        }
+        o.material = paint;
+      }
     }
   });
   const pivots = [], wheels = [];
