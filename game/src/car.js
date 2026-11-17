@@ -5,18 +5,29 @@ import * as THREE from 'three';
 import { CAR, DAMAGE, LOT } from './config.js';
 import { carTemplate, findGroup } from './assets.js';
 
-/** Soft radial pool of headlight on the asphalt, drawn once. */
+/** Soft pool of headlight on the asphalt, drawn once: a radial gradient
+with a fast falloff, plus faint offset blobs that roughen the outline, so
+from above it reads as light spill on the road, not a drawn ellipse. */
 const poolTex = (() => {
   const c = document.createElement('canvas');
   c.width = 128; c.height = 128;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,214,138,0.42)');
-  grad.addColorStop(0.35, 'rgba(255,214,138,0.24)');
-  grad.addColorStop(0.7, 'rgba(255,214,138,0.07)');
+  grad.addColorStop(0, 'rgba(255,214,138,0.38)');
+  grad.addColorStop(0.3, 'rgba(255,214,138,0.18)');
+  grad.addColorStop(0.55, 'rgba(255,214,138,0.05)');
+  grad.addColorStop(0.8, 'rgba(255,214,138,0.01)');
   grad.addColorStop(1, 'rgba(255,214,138,0)');
   g.fillStyle = grad;
   g.fillRect(0, 0, 128, 128);
+  // Irregular edge: a few faint blobs around the rim break the ellipse.
+  for (const [x, y, r, a] of [[30, 46, 16, 0.05], [98, 40, 14, 0.04], [22, 84, 13, 0.04], [104, 88, 17, 0.05], [64, 108, 15, 0.04], [64, 22, 12, 0.04]]) {
+    const b = g.createRadialGradient(x, y, 1, x, y, r);
+    b.addColorStop(0, `rgba(255,214,138,${a})`);
+    b.addColorStop(1, 'rgba(255,214,138,0)');
+    g.fillStyle = b;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
   return new THREE.CanvasTexture(c);
 })();
 

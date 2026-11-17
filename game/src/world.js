@@ -105,16 +105,48 @@ export function createWorld(scene, level) {
   );
   scene.add(sky);
 
-  // Moon with a soft halo, high over the north lot, in view of the chase cam.
+  // Moon with crater shading and a soft halo, high over the north lot, in
+  // view of the chase cam. The disc is a canvas texture (maria blotches and
+  // small craters), not a flat white circle; the halo is a radial gradient
+  // that fades into the sky instead of a hard-edged disc.
+  const moonTex = canvasTexture(256, 256, (g, W, H) => {
+    const grad = g.createRadialGradient(112, 108, 16, 128, 128, 124);
+    grad.addColorStop(0, '#fdf8e7');
+    grad.addColorStop(0.7, '#f0e5c3');
+    grad.addColorStop(0.9, '#dccfa6');
+    grad.addColorStop(1, 'rgba(220,207,166,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+    // Maria: soft darker blotches.
+    g.fillStyle = 'rgba(148,138,112,0.38)';
+    for (const [x, y, rx, ry, a] of [[96, 96, 34, 26, 0.4], [156, 146, 28, 34, 0.5], [120, 172, 22, 16, 0.3], [166, 86, 16, 14, 0.6]]) {
+      g.beginPath(); g.ellipse(x, y, rx, ry, a, 0, Math.PI * 2); g.fill();
+    }
+    // Craters: dark pit with a light rim on the lit side.
+    for (const [x, y, r] of [[86, 140, 7], [150, 106, 5], [110, 70, 6], [176, 160, 4], [70, 100, 4]]) {
+      g.fillStyle = 'rgba(118,108,84,0.45)';
+      g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+      g.fillStyle = 'rgba(255,250,230,0.5)';
+      g.beginPath(); g.arc(x - r * 0.25, y - r * 0.25, r * 0.5, 0, Math.PI * 2); g.fill();
+    }
+  });
+  const haloTex = canvasTexture(256, 256, (g, W, H) => {
+    const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
+    grad.addColorStop(0, 'rgba(210,222,255,0.5)');
+    grad.addColorStop(0.4, 'rgba(200,212,255,0.18)');
+    grad.addColorStop(1, 'rgba(200,212,255,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, W, H);
+  });
   const moonDisc = new THREE.Mesh(
-    new THREE.CircleGeometry(14, 32),
-    new THREE.MeshBasicMaterial({ color: 0xf4ecd8, fog: false }),
+    new THREE.CircleGeometry(10, 32),
+    new THREE.MeshBasicMaterial({ map: moonTex, transparent: true, fog: false }),
   );
   moonDisc.position.set(-45, 55, -260);
   moonDisc.lookAt(0, 0, 0);
   const moonHalo = new THREE.Mesh(
-    new THREE.CircleGeometry(24, 32),
-    new THREE.MeshBasicMaterial({ color: 0xcfd8ff, transparent: true, opacity: 0.22, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
+    new THREE.CircleGeometry(26, 32),
+    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.55, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   moonHalo.position.copy(moonDisc.position).multiplyScalar(0.995);
   moonHalo.lookAt(0, 0, 0);
@@ -173,15 +205,17 @@ export function createWorld(scene, level) {
   scene.add(ground);
 
   // Perimeter buildings: Blender-built facades with real lit windows,
-  // parapets and roof plant — no more flat textured boxes.
-  const facadeCanon = { Facade: [24, 16, 12], FacadeTall: [16, 22, 10] };
+  // parapets and roof plant — no more flat textured boxes. The 30 m slots
+  // use the FacadeWide variant (canonical 30x20x14, scale ~1.0) so their
+  // windows stay dense instead of stretching 1.875x into light panels.
+  const facadeCanon = { Facade: [24, 16, 12], FacadeTall: [16, 22, 10], FacadeWide: [30, 20, 14] };
   const buildings = [
     [-58, -38, 22, 16, 12], [0, -40, 30, 20, 14], [58, -38, 22, 16, 11],
     [-58, 38, 22, 16, 13], [0, 40, 30, 20, 15], [58, 38, 22, 16, 12],
     [-56, 0, 16, 22, 10], [56, 0, 16, 22, 10],
   ];
   for (const [x, z, w, h, d] of buildings) {
-    const variant = h > 18 ? 'FacadeTall' : 'Facade';
+    const variant = w >= 30 ? 'FacadeWide' : (h > 18 ? 'FacadeTall' : 'Facade');
     const canon = facadeCanon[variant];
     const b = findGroup(facadeTemplate(), variant).clone(true);
     b.scale.set(w / canon[0], h / canon[1], d / canon[2]);
@@ -217,8 +251,11 @@ export function createWorld(scene, level) {
   }
 
   // Lamps: Blender-built pole + arm + head; three real point lights, the
-  // rest emissive only.
-  const lampPositions = [[-30, -13], [-10, -13], [10, -13], [30, -13], [-20, 13], [0, 13], [20, 13]];
+  // rest emissive only. Poles stand at the lot edges (z = +/-29, between
+  // the bay rows and the curbs), clear of the driving lanes — and their x
+  // positions fall BETWEEN bays, never on a bay centreline, so no pole
+  // sits on a level's approach line in the chase camera's view.
+  const lampPositions = [[-33, -29], [-9, -29], [15, -29], [33, -29], [-27, 29], [-3, 29], [21, 29]];
   const lampTemplate = findGroup(propTemplate(), 'Lamp');
   let lightCount = 0;
   for (const [x, z] of lampPositions) {
