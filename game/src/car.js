@@ -7,15 +7,17 @@ import { carTemplate, findGroup } from './assets.js';
 
 /** Soft pool of headlight on the asphalt, drawn once: a radial gradient
 with a fast falloff, plus faint offset blobs that roughen the outline, so
-from above it reads as light spill on the road, not a drawn ellipse. */
+from above it reads as light spill on the road, not a drawn ellipse.
+Pass #4 flattens the gradient peak (0.38 -> 0.20) so the two beams no
+longer add up to a bright hot core where they meet. */
 const poolTex = (() => {
   const c = document.createElement('canvas');
   c.width = 128; c.height = 128;
   const g = c.getContext('2d');
   const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
-  grad.addColorStop(0, 'rgba(255,214,138,0.38)');
-  grad.addColorStop(0.3, 'rgba(255,214,138,0.18)');
-  grad.addColorStop(0.55, 'rgba(255,214,138,0.05)');
+  grad.addColorStop(0, 'rgba(255,214,138,0.20)');
+  grad.addColorStop(0.3, 'rgba(255,214,138,0.12)');
+  grad.addColorStop(0.55, 'rgba(255,214,138,0.04)');
   grad.addColorStop(0.8, 'rgba(255,214,138,0.01)');
   grad.addColorStop(1, 'rgba(255,214,138,0)');
   g.fillStyle = grad;
@@ -66,7 +68,7 @@ export function makeCarMesh(color, opts = {}) {
   // Headlight beams: barely-there cones, narrow at the lamp and widening
   // forward, plus one wide soft pool of light on the asphalt — no hard
   // cone edges visible from above, just light on the road.
-  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.02, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+  const beamMat = new THREE.MeshBasicMaterial({ color: 0xffd98a, transparent: true, opacity: 0.012, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
   for (const s of [-1, 1]) {
     const beam = new THREE.Mesh(new THREE.ConeGeometry(1.2, 5, 12, 1, true), beamMat);
     beam.rotation.x = -Math.PI / 2;

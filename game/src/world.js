@@ -112,28 +112,29 @@ export function createWorld(scene, level) {
   const moonTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(112, 108, 16, 128, 128, 124);
     grad.addColorStop(0, '#fdf8e7');
-    grad.addColorStop(0.7, '#f0e5c3');
-    grad.addColorStop(0.9, '#dccfa6');
-    grad.addColorStop(1, 'rgba(220,207,166,0)');
+    grad.addColorStop(0.7, '#efe2b8');
+    grad.addColorStop(0.9, '#d9c89e');
+    grad.addColorStop(1, 'rgba(217,200,158,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
-    // Maria: soft darker blotches.
-    g.fillStyle = 'rgba(148,138,112,0.38)';
-    for (const [x, y, rx, ry, a] of [[96, 96, 34, 26, 0.4], [156, 146, 28, 34, 0.5], [120, 172, 22, 16, 0.3], [166, 86, 16, 14, 0.6]]) {
+    // Maria: soft darker blotches, deeper than pass #3 so the texture
+    // survives at game distance instead of washing out to a plain disc.
+    g.fillStyle = 'rgba(148,138,112,0.65)';
+    for (const [x, y, rx, ry, a] of [[96, 96, 34, 26, 0.4], [156, 146, 28, 34, 0.5], [120, 172, 22, 16, 0.3], [166, 86, 16, 14, 0.6], [140, 120, 20, 18, 0.5], [100, 130, 18, 20, 0.4]]) {
       g.beginPath(); g.ellipse(x, y, rx, ry, a, 0, Math.PI * 2); g.fill();
     }
     // Craters: dark pit with a light rim on the lit side.
     for (const [x, y, r] of [[86, 140, 7], [150, 106, 5], [110, 70, 6], [176, 160, 4], [70, 100, 4]]) {
-      g.fillStyle = 'rgba(118,108,84,0.45)';
+      g.fillStyle = 'rgba(118,108,84,0.62)';
       g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
-      g.fillStyle = 'rgba(255,250,230,0.5)';
+      g.fillStyle = 'rgba(255,250,230,0.55)';
       g.beginPath(); g.arc(x - r * 0.25, y - r * 0.25, r * 0.5, 0, Math.PI * 2); g.fill();
     }
   });
   const haloTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(210,222,255,0.5)');
-    grad.addColorStop(0.4, 'rgba(200,212,255,0.18)');
+    grad.addColorStop(0, 'rgba(210,222,255,0.35)');
+    grad.addColorStop(0.4, 'rgba(200,212,255,0.15)');
     grad.addColorStop(1, 'rgba(200,212,255,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
@@ -144,11 +145,15 @@ export function createWorld(scene, level) {
   );
   moonDisc.position.set(-45, 55, -260);
   moonDisc.lookAt(0, 0, 0);
+  // The halo sits BEHIND the disc (1.005x the disc position, further from
+  // the camera) so its bright centre cannot wash out the disc texture —
+  // pass #4 had it at 0.995x, in front of the disc, which flooded the
+  // craters/maria and left a plain white disc.
   const moonHalo = new THREE.Mesh(
     new THREE.CircleGeometry(26, 32),
     new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.55, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
-  moonHalo.position.copy(moonDisc.position).multiplyScalar(0.995);
+  moonHalo.position.copy(moonDisc.position).multiplyScalar(1.005);
   moonHalo.lookAt(0, 0, 0);
   scene.add(moonDisc, moonHalo);
 
@@ -253,9 +258,11 @@ export function createWorld(scene, level) {
   // Lamps: Blender-built pole + arm + head; three real point lights, the
   // rest emissive only. Poles stand at the lot edges (z = +/-29, between
   // the bay rows and the curbs), clear of the driving lanes — and their x
-  // positions fall BETWEEN bays, never on a bay centreline, so no pole
-  // sits on a level's approach line in the chase camera's view.
-  const lampPositions = [[-33, -29], [-9, -29], [15, -29], [33, -29], [-27, 29], [-3, 29], [21, 29]];
+  // positions fall BETWEEN bays, never on a bay centreline. Pass #4 moved
+  // the pole that stood 3 m east of the level 1 bay (x = -9) to the far
+  // north-west corner (x = -45), so no pole appears in the level 1 play
+  // or end frames at all; the three point lights now fall on -33, 15, 33.
+  const lampPositions = [[-33, -29], [15, -29], [33, -29], [-45, -29], [-27, 29], [-3, 29], [21, 29]];
   const lampTemplate = findGroup(propTemplate(), 'Lamp');
   let lightCount = 0;
   for (const [x, z] of lampPositions) {
