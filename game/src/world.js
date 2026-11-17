@@ -28,10 +28,19 @@ function groundTexture(rng) {
       g.fillStyle = rng() > 0.5 ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.10)';
       g.fillRect(rng() * W, rng() * H, 2, 2);
     }
+    // Soft, low-contrast wear patches (pass #7): the old hard dark
+    // ellipses read as black blotches from the top camera. Radial
+    // gradients at low alpha fade into the asphalt instead of ending
+    // in a hard edge.
     for (let i = 0; i < 14; i += 1) {
-      g.fillStyle = 'rgba(0,0,0,0.16)';
+      const cx = rng() * W, cy = rng() * H, r = 30 + rng() * 45;
+      const grad = g.createRadialGradient(cx, cy, 0, cx, cy, r);
+      grad.addColorStop(0, 'rgba(0,0,0,0.07)');
+      grad.addColorStop(0.7, 'rgba(0,0,0,0.04)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = grad;
       g.beginPath();
-      g.ellipse(rng() * W, rng() * H, 18 + rng() * 30, 10 + rng() * 16, rng() * 3, 0, Math.PI * 2);
+      g.ellipse(cx, cy, r, r * (0.55 + rng() * 0.3), rng() * 3, 0, Math.PI * 2);
       g.fill();
     }
     // Large-scale tone variation (pass #5): warm and cool mottling so
@@ -50,7 +59,7 @@ function groundTexture(rng) {
       g.fillRect(0, pz(z) - 1.2 * sz, W, 2.4 * sz);
     }
     for (let i = 0; i < 7; i += 1) {
-      g.fillStyle = rng() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.12)';
+      g.fillStyle = rng() > 0.5 ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
       g.fillRect(rng() * W, rng() * H, 40 + rng() * 90, 24 + rng() * 50);
     }
     // Lane dashes down the middle and along the driving lanes.
@@ -132,17 +141,27 @@ export function createWorld(scene, level) {
   scene.add(sky);
 
   // Low sun with a warm halo, high over the north lot, in view of the
-  // chase cam. A plain bright disc (no maria/craters — the moon is gone
-  // with the night); the halo is a radial gradient that fades into the
-  // sky instead of a hard-edged disc.
+  // chase cam. Pass #7: the old disc was one smooth radial gradient with
+  // no edge, so it read as a pale blob against the bright sky. The core
+  // is now a solid disc with a HARD edge (bright centre, warm rim) plus a
+  // separate soft glow around it — a sun, not a smudge.
   const sunTex = canvasTexture(256, 256, (g, W, H) => {
-    const grad = g.createRadialGradient(128, 128, 20, 128, 128, 124);
-    grad.addColorStop(0, '#fffbe8');
-    grad.addColorStop(0.55, '#ffedb0');
-    grad.addColorStop(0.8, '#ffd98a');
-    grad.addColorStop(1, 'rgba(255,217,138,0)');
-    g.fillStyle = grad;
+    const glow = g.createRadialGradient(128, 128, 30, 128, 128, 126);
+    glow.addColorStop(0, 'rgba(255,196,96,0.5)');
+    glow.addColorStop(0.5, 'rgba(255,190,90,0.16)');
+    glow.addColorStop(1, 'rgba(255,190,90,0)');
+    g.fillStyle = glow;
     g.fillRect(0, 0, W, H);
+    const core = g.createRadialGradient(128, 128, 0, 128, 128, 62);
+    core.addColorStop(0, '#ffffff');
+    core.addColorStop(0.7, '#fff6cf');
+    core.addColorStop(0.95, '#ffe9a0');
+    core.addColorStop(1, '#ffe9a0');
+    g.fillStyle = core;
+    g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,214,140,0.9)';
+    g.lineWidth = 3;
+    g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.stroke();
   });
   const haloTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
@@ -172,7 +191,7 @@ export function createWorld(scene, level) {
   // distant skyline silhouettes ringing the lot on it — not floating in sky.
   const farGround = new THREE.Mesh(
     new THREE.CircleGeometry(320, 48),
-    new THREE.MeshStandardMaterial({ color: 0x4a4640, roughness: 1 }),
+    new THREE.MeshStandardMaterial({ color: 0x6b6257, roughness: 1 }),
   );
   farGround.rotation.x = -Math.PI / 2;
   farGround.position.y = -0.05;
