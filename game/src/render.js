@@ -36,7 +36,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   // straight top edge still showed, so the hemisphere and the warm fill
   // are stronger still — the shadow is now much closer to the lit ground,
   // so its edge barely reads as a line.
-  const hemi = new THREE.HemisphereLight(0xbfd9ff, 0xa8906f, 1.6);
+  const hemi = new THREE.HemisphereLight(0xbfd9ff, 0xa8906f, 1.7);
   scene.add(hemi);
   const moon = new THREE.DirectionalLight(0xffd9a0, 2.0);
   moon.position.set(30, 80, 80);
@@ -49,7 +49,15 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   // away instead of reading as any line at all.
   // Pass #13: the roofline transition is still just readable, so the
   // radius goes 12 -> 16 (~1 m blur).
-  moon.shadow.radius = 16;
+  // Pass #14: radius alone is not enough any more — the edge is
+  // still just readable because the shadow is much darker than the
+  // lit ground, so any blur still leaves a brightness step. The
+  // radius goes 16 -> 22 (~1.3 m blur) AND the shadow-to-lit
+  // contrast shrinks: the warm fill rises 0.72 -> 0.85 and the
+  // hemisphere 1.6 -> 1.7, so the shadow reads as soft warm shade
+  // barely darker than the lit lot, and the roofline has almost no
+  // step left to show.
+  moon.shadow.radius = 22;
   moon.shadow.camera.left = -60; moon.shadow.camera.right = 60;
   moon.shadow.camera.top = 45; moon.shadow.camera.bottom = -45;
   moon.shadow.camera.far = 160;
@@ -57,7 +65,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   // Warm fill from the north-west, opposite the sun, no shadows: it
   // lifts every shadowed surface (including the south building's long
   // shadow on the lot) so the shadow reads as shade, not a dark panel.
-  const fill = new THREE.DirectionalLight(0xffe0b8, 0.72);
+  const fill = new THREE.DirectionalLight(0xffe0b8, 0.85);
   fill.position.set(-40, 60, -60);
   scene.add(fill);
 
