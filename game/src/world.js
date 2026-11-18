@@ -173,8 +173,8 @@ export function createWorld(scene, level) {
   // it. The halo shrinks too (r 40 -> 32) so the glow hugs the disc.
   const sunTex = canvasTexture(256, 256, (g, W, H) => {
     const glow = g.createRadialGradient(128, 128, 62, 128, 128, 88);
-    glow.addColorStop(0, 'rgba(255,170,60,0.22)');
-    glow.addColorStop(0.5, 'rgba(255,165,55,0.08)');
+    glow.addColorStop(0, 'rgba(255,170,60,0.16)');
+    glow.addColorStop(0.5, 'rgba(255,165,55,0.05)');
     glow.addColorStop(1, 'rgba(255,165,55,0)');
     g.fillStyle = glow;
     g.fillRect(0, 0, W, H);
@@ -208,11 +208,17 @@ export function createWorld(scene, level) {
   // r 32 -> 28, sky wash 0.26 -> 0.20 and r 75 -> 65) so the amber
   // disc keeps its presence on blue sky instead of sitting inside
   // a pale cloud. The disc itself is untouched.
+  // Pass #15: the halo is now tight around the disc, but it still
+  // reads as a very thin pale patch hugging the disc. All three
+  // glow layers dim and shrink a little more (baked glow 0.22 ->
+  // 0.16, halo opacity 0.42 -> 0.34 and r 28 -> 25, sky wash
+  // 0.20 -> 0.14 and r 65 -> 58) so the glow barely whispers
+  // around the disc. The disc itself is untouched.
   sunTex.colorSpace = THREE.SRGBColorSpace;
   const haloTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255,205,120,0.28)');
-    grad.addColorStop(0.4, 'rgba(255,190,90,0.16)');
+    grad.addColorStop(0, 'rgba(255,205,120,0.20)');
+    grad.addColorStop(0.4, 'rgba(255,190,90,0.10)');
     grad.addColorStop(1, 'rgba(255,190,90,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
@@ -226,8 +232,8 @@ export function createWorld(scene, level) {
   // The halo sits BEHIND the disc (1.005x the disc position, further from
   // the camera) so its bright centre cannot wash out the disc.
   const sunHalo = new THREE.Mesh(
-    new THREE.CircleGeometry(28, 32),
-    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.42, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
+    new THREE.CircleGeometry(25, 32),
+    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.34, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   sunHalo.position.copy(sunDisc.position).multiplyScalar(1.005);
   sunHalo.lookAt(0, 0, 0);
@@ -236,14 +242,14 @@ export function createWorld(scene, level) {
   // has something warm to sit on, not bare sky.
   const skyGlowTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255,170,90,0.20)');
-    grad.addColorStop(0.45, 'rgba(255,160,80,0.10)');
+    grad.addColorStop(0, 'rgba(255,170,90,0.14)');
+    grad.addColorStop(0.45, 'rgba(255,160,80,0.06)');
     grad.addColorStop(1, 'rgba(255,160,80,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
   });
   const skyGlow = new THREE.Mesh(
-    new THREE.CircleGeometry(65, 32),
+    new THREE.CircleGeometry(58, 32),
     new THREE.MeshBasicMaterial({ map: skyGlowTex, transparent: true, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   skyGlow.position.copy(sunDisc.position).multiplyScalar(1.02);
