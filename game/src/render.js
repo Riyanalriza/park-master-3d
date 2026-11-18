@@ -9,11 +9,20 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  // Pass #10: PCFSoft ignores shadow.radius, so the south building's
+  // shadow edge stayed a hard straight line no matter how much fill
+  // light was added. PCFShadowMap honours radius: 5 blurs the edge by
+  // ~0.3 m at this frustum, softening the roofline without washing the
+  // shadow out.
+  renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
 
-  scene.fog = new THREE.Fog(0xd9c4a3, 90, 320);
+  // Warm haze fog: the colour matches the far-ground disc rim (world.js)
+  // and the sky at the horizon, so distant ground fades into the sky
+  // instead of ending in a visible band. (Pass #10: was 0xd9c4a3, a
+  // cooler grey that read as a separate strip against the warm sky.)
+  scene.fog = new THREE.Fog(0xeaa671, 90, 320);
 
   // Golden-hour sun: bright blue sky above, warm ground bounce below.
   // The light comes from the south-east, high: the chase camera looks
@@ -33,6 +42,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   moon.position.set(30, 80, 80);
   moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048);
+  moon.shadow.radius = 5;
   moon.shadow.camera.left = -60; moon.shadow.camera.right = 60;
   moon.shadow.camera.top = 45; moon.shadow.camera.bottom = -45;
   moon.shadow.camera.far = 160;

@@ -150,29 +150,30 @@ export function createWorld(scene, level) {
   // around it, so the disc stands out instead of blending in. Pass #9:
   // still soft against the pale sky, so the sky itself is deeper blue
   // now, the disc is bigger with a hotter orange rim, and the halo and
-  // sky wash are stronger and wider.
+  // sky wash are stronger and wider. Pass #10: the edge was still soft
+  // because the glow bled right up to the disc and the rim was a thin
+  // 4 px line — now the glow starts OUTSIDE the disc, the core is a
+  // solid amber disc with a hot bright centre, and the rim is a thick
+  // 8 px deep-orange ring at full opacity: a hard edge.
   const sunTex = canvasTexture(256, 256, (g, W, H) => {
-    const glow = g.createRadialGradient(128, 128, 30, 128, 128, 126);
-    glow.addColorStop(0, 'rgba(255,180,70,0.65)');
-    glow.addColorStop(0.5, 'rgba(255,170,60,0.28)');
-    glow.addColorStop(1, 'rgba(255,170,60,0)');
+    const glow = g.createRadialGradient(128, 128, 62, 128, 128, 126);
+    glow.addColorStop(0, 'rgba(255,170,60,0.5)');
+    glow.addColorStop(0.5, 'rgba(255,165,55,0.22)');
+    glow.addColorStop(1, 'rgba(255,165,55,0)');
     g.fillStyle = glow;
     g.fillRect(0, 0, W, H);
-    const core = g.createRadialGradient(128, 128, 0, 128, 128, 62);
-    core.addColorStop(0, '#fffdf0');
-    core.addColorStop(0.55, '#ffe98a');
-    core.addColorStop(0.85, '#ffc93d');
-    core.addColorStop(1, '#ff8a1a');
-    g.fillStyle = core;
+    g.fillStyle = '#ffd23e';
     g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(255,138,26,0.95)';
-    g.lineWidth = 4;
-    g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = '#fff6c8';
+    g.beginPath(); g.arc(128, 128, 38, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,106,0,1)';
+    g.lineWidth = 8;
+    g.beginPath(); g.arc(128, 128, 60, 0, Math.PI * 2); g.stroke();
   });
   const haloTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255,205,120,0.6)');
-    grad.addColorStop(0.4, 'rgba(255,190,90,0.3)');
+    grad.addColorStop(0, 'rgba(255,205,120,0.4)');
+    grad.addColorStop(0.4, 'rgba(255,190,90,0.25)');
     grad.addColorStop(1, 'rgba(255,190,90,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
@@ -196,8 +197,8 @@ export function createWorld(scene, level) {
   // has something warm to sit on, not bare sky.
   const skyGlowTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255,170,90,0.42)');
-    grad.addColorStop(0.45, 'rgba(255,160,80,0.2)');
+    grad.addColorStop(0, 'rgba(255,170,90,0.5)');
+    grad.addColorStop(0.45, 'rgba(255,160,80,0.25)');
     grad.addColorStop(1, 'rgba(255,160,80,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
@@ -218,12 +219,15 @@ export function createWorld(scene, level) {
   // Pass #9: the rim still read as a flat tan band in the menu shot, so
   // it now fades to a warm haze the colour of the sky at the horizon,
   // blending the ground into the sky instead of ending in a hard band.
+  // Pass #10: the rim now matches the FOG colour exactly (see render.js),
+  // so at 320 m the disc is fully fogged into the same warm haze the sky
+  // fades to — no visible line where ground meets sky.
   const farGroundTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 10, 128, 128, 128);
     grad.addColorStop(0, '#7d7466');
     grad.addColorStop(0.45, '#6b6257');
     grad.addColorStop(0.8, '#8a7459');
-    grad.addColorStop(1, '#c99a6a');
+    grad.addColorStop(1, '#eaa671');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
   });
@@ -290,15 +294,19 @@ export function createWorld(scene, level) {
   // Trees outside the lot, between the buildings — the lot is clamped, so
   // they never need colliders. Four more line the streets in front of the
   // perimeter blocks, so the city reads as tree-lined, not bare.
-  const treeTemplate = findGroup(propTemplate(), 'Tree');
-  for (const [x, z, s] of [[30, -40, 1.1], [-30, -40, 0.9], [30, 40, 1.0], [-30, 40, 1.2], [-52, -8, 0.85], [-52, 8, 1.05], [52, -8, 0.95], [52, 8, 1.1], [20, -40, 1.0], [-20, -40, 1.15], [20, 40, 0.9], [-20, 40, 1.05]]) {
-    const tree = treeTemplate.clone(true);
+  // Pass #10: three silhouette variants (TreeA round, TreeB tall poplar,
+  // TreeC wide oak) cycled along the streets, so the trees no longer read
+  // as one clone repeated twelve times at regular intervals.
+  const treeVariants = ['TreeA', 'TreeB', 'TreeC'];
+  const treeSpots = [[30, -40, 1.1], [-30, -40, 0.9], [30, 40, 1.0], [-30, 40, 1.2], [-52, -8, 0.85], [-52, 8, 1.05], [52, -8, 0.95], [52, 8, 1.1], [20, -40, 1.0], [-20, -40, 1.15], [20, 40, 0.9], [-20, 40, 1.05]];
+  treeSpots.forEach(([x, z, s], i) => {
+    const tree = findGroup(propTemplate(), treeVariants[i % 3]).clone(true);
     tree.position.set(x, 0, z);
     tree.scale.setScalar(s);
     tree.rotation.y = rng() * Math.PI * 2;
     tree.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(tree);
-  }
+  });
 
   // Curbs around the lot edge.
   const curbMat = new THREE.MeshStandardMaterial({ color: PALETTE.curb, roughness: 0.9 });
