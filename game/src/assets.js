@@ -1,7 +1,7 @@
 // Blender-built assets (car.glb, towers.glb, facades.glb, props.glb) loaded
 // once at boot. The GLBs are original models built for this game in Blender;
 // nothing in them is copied from any other game.
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.min.js';
 
 const loader = new GLTFLoader();
 let cache = null;
