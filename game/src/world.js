@@ -129,8 +129,12 @@ export function createWorld(scene, level) {
     grad.addColorStop(0, '#1c4d9c');
     grad.addColorStop(0.45, '#5d93c8');
     grad.addColorStop(0.7, '#eeb87e');
-    grad.addColorStop(0.85, '#f6a55e');
-    grad.addColorStop(1, '#e88f4e');
+    grad.addColorStop(0.85, '#f2a468');
+    // Pass #11: the bottom stop was #e88f4e while the fog is #eaa671,
+    // so at oblique angles a faint line showed where the sky dome met
+    // the fogged far ground. The bottom now IS the fog colour, so the
+    // ground fades into the sky with no seam from any angle.
+    grad.addColorStop(1, '#eaa671');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
   });
@@ -155,6 +159,11 @@ export function createWorld(scene, level) {
   // 4 px line — now the glow starts OUTSIDE the disc, the core is a
   // solid amber disc with a hot bright centre, and the rim is a thick
   // 8 px deep-orange ring at full opacity: a hard edge.
+  // Pass #11: the disc was still small in the chase frame and sat
+  // right against the facade's edge, so it moves into the open sky
+  // (further west, higher) and grows: disc r 16 -> 21, halo 32 -> 40,
+  // sky wash 110 -> 130. It now sits in the middle of the sky gap
+  // between the west towers and the east facade, not on any edge.
   const sunTex = canvasTexture(256, 256, (g, W, H) => {
     const glow = g.createRadialGradient(128, 128, 62, 128, 128, 126);
     glow.addColorStop(0, 'rgba(255,170,60,0.5)');
@@ -179,15 +188,15 @@ export function createWorld(scene, level) {
     g.fillRect(0, 0, W, H);
   });
   const sunDisc = new THREE.Mesh(
-    new THREE.CircleGeometry(16, 32),
+    new THREE.CircleGeometry(21, 32),
     new THREE.MeshBasicMaterial({ map: sunTex, transparent: true, fog: false }),
   );
-  sunDisc.position.set(-35, 62, -260);
+  sunDisc.position.set(-65, 72, -260);
   sunDisc.lookAt(0, 0, 0);
   // The halo sits BEHIND the disc (1.005x the disc position, further from
   // the camera) so its bright centre cannot wash out the disc.
   const sunHalo = new THREE.Mesh(
-    new THREE.CircleGeometry(32, 32),
+    new THREE.CircleGeometry(40, 32),
     new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.7, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   sunHalo.position.copy(sunDisc.position).multiplyScalar(1.005);
@@ -204,7 +213,7 @@ export function createWorld(scene, level) {
     g.fillRect(0, 0, W, H);
   });
   const skyGlow = new THREE.Mesh(
-    new THREE.CircleGeometry(110, 32),
+    new THREE.CircleGeometry(130, 32),
     new THREE.MeshBasicMaterial({ map: skyGlowTex, transparent: true, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   skyGlow.position.copy(sunDisc.position).multiplyScalar(1.02);

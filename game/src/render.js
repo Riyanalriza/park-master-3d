@@ -42,7 +42,9 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   moon.position.set(30, 80, 80);
   moon.castShadow = true;
   moon.shadow.mapSize.set(2048, 2048);
-  moon.shadow.radius = 5;
+  // Pass #11: the roofline still read faintly as a straight line, so
+  // the blur radius goes 5 -> 8 (~0.5 m on this frustum).
+  moon.shadow.radius = 8;
   moon.shadow.camera.left = -60; moon.shadow.camera.right = 60;
   moon.shadow.camera.top = 45; moon.shadow.camera.bottom = -45;
   moon.shadow.camera.far = 160;
