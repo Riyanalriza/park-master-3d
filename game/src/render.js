@@ -47,7 +47,9 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   // Pass #12 (FINAL): the roofline still reads very faintly, so the
   // radius goes 8 -> 12 (~0.75 m blur) — the edge should now grade
   // away instead of reading as any line at all.
-  moon.shadow.radius = 12;
+  // Pass #13: the roofline transition is still just readable, so the
+  // radius goes 12 -> 16 (~1 m blur).
+  moon.shadow.radius = 16;
   moon.shadow.camera.left = -60; moon.shadow.camera.right = 60;
   moon.shadow.camera.top = 45; moon.shadow.camera.bottom = -45;
   moon.shadow.camera.far = 160;

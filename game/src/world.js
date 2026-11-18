@@ -192,6 +192,15 @@ export function createWorld(scene, level) {
     g.lineWidth = 6;
     g.beginPath(); g.arc(128, 128, 60, 0, Math.PI * 2); g.stroke();
   });
+  // Pass #13: the disc STILL measured (234,215,86) — pale yellow, not
+  // amber. Root cause is colour management, not the fill: the canvas
+  // texture has no colourSpace, so its sRGB values are sampled as
+  // linear and ACES + the sRGB output lift #ff9d00 to pale yellow.
+  // Mark the texture sRGB and switch the disc material off tone
+  // mapping, so the disc renders exactly the amber it was painted.
+  // The halo/sky glow dim a little too (0.7 -> 0.55, 0.32 -> 0.26)
+  // so the disc sits on blue sky, not inside a white cloud.
+  sunTex.colorSpace = THREE.SRGBColorSpace;
   const haloTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 8, 128, 128, 128);
     grad.addColorStop(0, 'rgba(255,205,120,0.4)');
@@ -202,7 +211,7 @@ export function createWorld(scene, level) {
   });
   const sunDisc = new THREE.Mesh(
     new THREE.CircleGeometry(21, 32),
-    new THREE.MeshBasicMaterial({ map: sunTex, transparent: true, fog: false }),
+    new THREE.MeshBasicMaterial({ map: sunTex, transparent: true, fog: false, toneMapped: false }),
   );
   sunDisc.position.set(-65, 72, -260);
   sunDisc.lookAt(0, 0, 0);
@@ -210,7 +219,7 @@ export function createWorld(scene, level) {
   // the camera) so its bright centre cannot wash out the disc.
   const sunHalo = new THREE.Mesh(
     new THREE.CircleGeometry(32, 32),
-    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.7, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.55, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   sunHalo.position.copy(sunDisc.position).multiplyScalar(1.005);
   sunHalo.lookAt(0, 0, 0);
@@ -219,8 +228,8 @@ export function createWorld(scene, level) {
   // has something warm to sit on, not bare sky.
   const skyGlowTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255,170,90,0.32)');
-    grad.addColorStop(0.45, 'rgba(255,160,80,0.16)');
+    grad.addColorStop(0, 'rgba(255,170,90,0.26)');
+    grad.addColorStop(0.45, 'rgba(255,160,80,0.13)');
     grad.addColorStop(1, 'rgba(255,160,80,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
@@ -319,10 +328,10 @@ export function createWorld(scene, level) {
   // Pass #10: three silhouette variants (TreeA round, TreeB tall poplar,
   // TreeC wide oak) cycled along the streets, so the trees no longer read
   // as one clone repeated twelve times at regular intervals.
-  const treeVariants = ['TreeA', 'TreeB', 'TreeC'];
+  const treeVariants = ['TreeA', 'TreeB', 'TreeC', 'TreeD'];
   const treeSpots = [[30, -40, 1.1], [-30, -40, 0.9], [30, 40, 1.0], [-30, 40, 1.2], [-52, -8, 0.85], [-52, 8, 1.05], [52, -8, 0.95], [52, 8, 1.1], [20, -40, 1.0], [-20, -40, 1.15], [20, 40, 0.9], [-20, 40, 1.05]];
   treeSpots.forEach(([x, z, s], i) => {
-    const tree = findGroup(propTemplate(), treeVariants[i % 3]).clone(true);
+    const tree = findGroup(propTemplate(), treeVariants[i % treeVariants.length]).clone(true);
     tree.position.set(x, 0, z);
     tree.scale.setScalar(s);
     tree.rotation.y = rng() * Math.PI * 2;
