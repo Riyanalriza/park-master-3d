@@ -164,19 +164,32 @@ export function createWorld(scene, level) {
   // (further west, higher) and grows: disc r 16 -> 21, halo 32 -> 40,
   // sky wash 110 -> 130. It now sits in the middle of the sky gap
   // between the west towers and the east facade, not on any edge.
+  // Pass #12 (FINAL): the disc still read as a RING — pale cream
+  // centre (#fff6c8) against the amber ring (#ffd23e) — and the sky
+  // wash read as one big pale blotch on the left of the sky. The disc
+  // is now one uniform solid amber (#ffcf3e, no pale centre at all)
+  // with a thin deep-orange rim, so it reads as a solid sun, and the
+  // wash shrinks (r 130 -> 75) and dims so the sky stays blue around
+  // it. The halo shrinks too (r 40 -> 32) so the glow hugs the disc.
   const sunTex = canvasTexture(256, 256, (g, W, H) => {
-    const glow = g.createRadialGradient(128, 128, 62, 128, 128, 126);
-    glow.addColorStop(0, 'rgba(255,170,60,0.5)');
-    glow.addColorStop(0.5, 'rgba(255,165,55,0.22)');
+    const glow = g.createRadialGradient(128, 128, 62, 128, 128, 88);
+    glow.addColorStop(0, 'rgba(255,170,60,0.35)');
+    glow.addColorStop(0.5, 'rgba(255,165,55,0.15)');
     glow.addColorStop(1, 'rgba(255,165,55,0)');
     g.fillStyle = glow;
     g.fillRect(0, 0, W, H);
-    g.fillStyle = '#ffd23e';
+    // Pass #12b: the uniform disc was still pale cream-yellow against
+    // the pale horizon band, so the fill deepens to a rich amber
+    // (#ffb52e) — still one solid colour, no pale centre, but it now
+    // stands out from the sky instead of blending into it.
+    // Pass #12c: pixel check showed the disc rendering at (232,220,162)
+    // — ACES tone mapping lifts #ffb52e to pale yellow. The fill goes
+    // deeper still (#ff9d00) so that after tone mapping it reads as a
+    // rich amber sun, not a pale coin.
+    g.fillStyle = '#ff9d00';
     g.beginPath(); g.arc(128, 128, 62, 0, Math.PI * 2); g.fill();
-    g.fillStyle = '#fff6c8';
-    g.beginPath(); g.arc(128, 128, 38, 0, Math.PI * 2); g.fill();
-    g.strokeStyle = 'rgba(255,106,0,1)';
-    g.lineWidth = 8;
+    g.strokeStyle = 'rgba(240,110,0,1)';
+    g.lineWidth = 6;
     g.beginPath(); g.arc(128, 128, 60, 0, Math.PI * 2); g.stroke();
   });
   const haloTex = canvasTexture(256, 256, (g, W, H) => {
@@ -196,7 +209,7 @@ export function createWorld(scene, level) {
   // The halo sits BEHIND the disc (1.005x the disc position, further from
   // the camera) so its bright centre cannot wash out the disc.
   const sunHalo = new THREE.Mesh(
-    new THREE.CircleGeometry(40, 32),
+    new THREE.CircleGeometry(32, 32),
     new THREE.MeshBasicMaterial({ map: haloTex, transparent: true, opacity: 0.7, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   sunHalo.position.copy(sunDisc.position).multiplyScalar(1.005);
@@ -206,14 +219,14 @@ export function createWorld(scene, level) {
   // has something warm to sit on, not bare sky.
   const skyGlowTex = canvasTexture(256, 256, (g, W, H) => {
     const grad = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-    grad.addColorStop(0, 'rgba(255,170,90,0.5)');
-    grad.addColorStop(0.45, 'rgba(255,160,80,0.25)');
+    grad.addColorStop(0, 'rgba(255,170,90,0.32)');
+    grad.addColorStop(0.45, 'rgba(255,160,80,0.16)');
     grad.addColorStop(1, 'rgba(255,160,80,0)');
     g.fillStyle = grad;
     g.fillRect(0, 0, W, H);
   });
   const skyGlow = new THREE.Mesh(
-    new THREE.CircleGeometry(130, 32),
+    new THREE.CircleGeometry(75, 32),
     new THREE.MeshBasicMaterial({ map: skyGlowTex, transparent: true, fog: false, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
   skyGlow.position.copy(sunDisc.position).multiplyScalar(1.02);
