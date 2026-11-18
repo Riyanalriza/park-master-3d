@@ -23,8 +23,11 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   // slab from the top camera — the shadowed ground only got the cool
   // hemisphere sky light. The hemisphere is now stronger with a warmer,
   // lighter ground bounce, and the sun slightly dimmer, so shadows read
-  // as soft warm shade instead of a blue panel.
-  const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x9c8a68, 1.45);
+  // as soft warm shade instead of a blue panel. Pass #9: the shadow's
+  // straight top edge still showed, so the hemisphere and the warm fill
+  // are stronger still — the shadow is now much closer to the lit ground,
+  // so its edge barely reads as a line.
+  const hemi = new THREE.HemisphereLight(0xbfd9ff, 0xa8906f, 1.6);
   scene.add(hemi);
   const moon = new THREE.DirectionalLight(0xffd9a0, 2.0);
   moon.position.set(30, 80, 80);
@@ -37,7 +40,7 @@ export function createView(canvas, mapCanvas, scene, game, ui) {
   // Warm fill from the north-west, opposite the sun, no shadows: it
   // lifts every shadowed surface (including the south building's long
   // shadow on the lot) so the shadow reads as shade, not a dark panel.
-  const fill = new THREE.DirectionalLight(0xffe0b8, 0.55);
+  const fill = new THREE.DirectionalLight(0xffe0b8, 0.72);
   fill.position.set(-40, 60, -60);
   scene.add(fill);
 
